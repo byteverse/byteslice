@@ -7,6 +7,7 @@ module Data.Bytes.Types
   , MutableBytes(..)
   ) where
 
+import Control.Monad.ST (runST)
 import Data.Primitive (ByteArray(..),MutableByteArray(..))
 import Data.Bits ((.&.),unsafeShiftR)
 import Data.Char (ord)
@@ -75,6 +76,16 @@ instance Ord Bytes where
   compare (Bytes arr1 off1 len1) (Bytes arr2 off2 len2)
     | sameByteArray arr1 arr2 && off1 == off2 && len1 == len2 = EQ
     | otherwise = compareByteArrays arr1 off1 arr2 off2 len1
+
+instance Semigroup Bytes where
+  -- TODO: Do the trick to move the data constructor to the outside
+  -- of runST.
+  Bytes arrA offA lenA <> Bytes arrB offB lenB = runST $ do
+    marr <- PM.newByteArray (lenA + lenB)
+    PM.copyByteArray marr 0 arrA offA lenA
+    PM.copyByteArray marr lenA arrB offB lenB
+    r <- PM.unsafeFreezeByteArray marr
+    pure (Bytes r 0 (lenA + lenB))
 
 compareByteArrays :: ByteArray -> Int -> ByteArray -> Int -> Int -> Ordering
 {-# INLINE compareByteArrays #-}
