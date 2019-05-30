@@ -1,14 +1,17 @@
 {-# language BangPatterns #-}
 {-# language MagicHash #-}
 {-# language TypeFamilies #-}
+{-# language DuplicateRecordFields #-}
 
 module Data.Bytes.Types
   ( Bytes(..)
   , MutableBytes(..)
+  , UnmanagedBytes(..)
   ) where
 
 import Control.Monad.ST (runST)
 import Data.Primitive (ByteArray(..),MutableByteArray(..))
+import Data.Primitive.Addr (Addr)
 import Data.Bits ((.&.),unsafeShiftR)
 import Data.Char (ord)
 import Data.Word (Word8)
@@ -21,15 +24,23 @@ import qualified Data.Primitive as PM
 
 -- | A slice of a 'ByteArray'.
 data Bytes = Bytes
-  {-# UNPACK #-} !ByteArray -- payload
-  {-# UNPACK #-} !Int -- offset
-  {-# UNPACK #-} !Int -- length
+  { array :: {-# UNPACK #-} !ByteArray
+  , offset :: {-# UNPACK #-} !Int
+  , length :: {-# UNPACK #-} !Int
+  }
 
 -- | A slice of a 'MutableByteArray'.
 data MutableBytes s = MutableBytes
-  {-# UNPACK #-} !(MutableByteArray s) -- payload
-  {-# UNPACK #-} !Int -- offset
-  {-# UNPACK #-} !Int -- length
+  { array :: {-# UNPACK #-} !(MutableByteArray s)
+  , offset :: {-# UNPACK #-} !Int
+  , length :: {-# UNPACK #-} !Int
+  }
+
+-- | A slice of unmanaged memory.
+data UnmanagedBytes = UnmanagedBytes
+  { address :: {-# UNPACK #-} !Addr
+  , length :: {-# UNPACK #-} !Int
+  }
 
 instance IsList Bytes where
   type Item Bytes = Word8

@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name: byteslice
-version: 0.1.0.0
+version: 0.1.1.0
 synopsis: Slicing ByteArray and MutableByteArray
 -- description:
 homepage: https://github.com/andrewthad/byteslice
