@@ -3,6 +3,7 @@
 
 module Data.Bytes.Unsliced
   ( toByteString
+  , fromByteString
   ) where
 
 import Control.Monad.ST (runST)
