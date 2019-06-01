@@ -10,7 +10,9 @@ import Data.ByteString (ByteString)
 import Data.Primitive (ByteArray)
 import GHC.Exts (Ptr(..),MutableByteArray#,Addr#,unsafeCoerce#)
 
+import qualified Data.ByteString.Unsafe as BU
 import qualified Data.Primitive as PM
+import qualified Data.Primitive.Addr as PMA
 import qualified Data.ByteString.Internal as BSI
 import qualified GHC.ForeignPtr as FP
 
@@ -25,6 +27,12 @@ toByteString a = do
       x <- PM.newPinnedByteArray sz
       PM.copyByteArray x 0 a 0 sz
       PM.unsafeFreezeByteArray x
+
+fromByteString :: ByteString -> IO ByteArray
+fromByteString b = BU.unsafeUseAsCStringLen b $ \(ptr,sz) -> do
+  m <- PM.newByteArray sz
+  PMA.copyAddrToByteArray m 0 (PMA.Addr (unPtr ptr)) sz
+  PM.unsafeFreezeByteArray m
 
 veryUnsafeThaw :: ByteArray -> MutableByteArray# s
 veryUnsafeThaw (PM.ByteArray x) = unsafeCoerce# x
