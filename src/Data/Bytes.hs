@@ -6,6 +6,7 @@ module Data.Bytes
   , null
   , length
   , takeWhile
+  , dropWhile
   , toByteArray
   , toByteArrayClone
     -- * Conversion
@@ -13,7 +14,7 @@ module Data.Bytes
   , fromByteArray
   ) where
 
-import Prelude hiding (length,takeWhile,null)
+import Prelude hiding (length,takeWhile,dropWhile,null)
 
 import Data.Bytes.Types (Bytes(Bytes))
 import Data.Primitive (ByteArray)
@@ -36,9 +37,18 @@ takeWhile :: (Word8 -> Bool) -> Bytes -> Bytes
 {-# inline takeWhile #-}
 takeWhile k b = unsafeTake (countWhile k b) b
 
+dropWhile :: (Word8 -> Bool) -> Bytes -> Bytes
+{-# inline dropWhile #-}
+dropWhile k b = unsafeDrop (countWhile k b) b
+
 unsafeTake :: Int -> Bytes -> Bytes
 {-# inline unsafeTake #-}
-unsafeTake n (Bytes arr off len) =
+unsafeTake n (Bytes arr off _) =
+  Bytes arr off n
+
+unsafeDrop :: Int -> Bytes -> Bytes
+{-# inline unsafeDrop #-}
+unsafeDrop n (Bytes arr off len) =
   Bytes arr (off + n) (len - n)
 
 -- Internal. The returns the number of bytes that match the
