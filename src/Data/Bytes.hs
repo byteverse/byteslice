@@ -2,14 +2,20 @@
 {-# language TypeApplications #-}
 
 module Data.Bytes
-  ( Bytes
+  ( -- * Types
+    Bytes
+    -- * Properties
   , null
   , length
+    -- * Filtering
   , takeWhile
   , dropWhile
+    -- * Unsafe Slicing
+  , unsafeTake
+  , unsafeDrop
+    -- * Conversion
   , toByteArray
   , toByteArrayClone
-    -- * Conversion
   , fromAsciiString
   , fromByteArray
   ) where
@@ -33,19 +39,23 @@ null (Bytes _ _ len) = len == 0
 length :: Bytes -> Int
 length (Bytes _ _ len) = len
 
+-- | Take bytes while the predicate is true.
 takeWhile :: (Word8 -> Bool) -> Bytes -> Bytes
 {-# inline takeWhile #-}
 takeWhile k b = unsafeTake (countWhile k b) b
 
+-- | Drop bytes while the predicate is true.
 dropWhile :: (Word8 -> Bool) -> Bytes -> Bytes
 {-# inline dropWhile #-}
 dropWhile k b = unsafeDrop (countWhile k b) b
 
+-- | Take the first @n@ bytes from the argument. Precondition: @n ≤ len@
 unsafeTake :: Int -> Bytes -> Bytes
 {-# inline unsafeTake #-}
 unsafeTake n (Bytes arr off _) =
   Bytes arr off n
 
+-- | Drop the first @n@ bytes from the argument. Precondition: @n ≤ len@
 unsafeDrop :: Int -> Bytes -> Bytes
 {-# inline unsafeDrop #-}
 unsafeDrop n (Bytes arr off len) =
@@ -87,6 +97,7 @@ toByteArrayClone (Bytes arr off len) = runByteArrayST $ do
 fromAsciiString :: String -> Bytes
 fromAsciiString = fromByteArray . Exts.fromList . map (fromIntegral @Int @Word8 . ord)
 
+-- | Create a slice of 'Bytes' that spans the entire argument array.
 fromByteArray :: ByteArray -> Bytes
 fromByteArray b = Bytes b 0 (PM.sizeofByteArray b)
 
