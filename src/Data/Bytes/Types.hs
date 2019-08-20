@@ -54,7 +54,7 @@ toListLoop !off !len !arr = if len > 0
   else []
 
 instance Show Bytes where
-  showsPrec d (Bytes arr off len) s = if len == 0
+  showsPrec _ (Bytes arr off len) s = if len == 0
     then showString "[]" s
     else showString "[0x"
        $ showHexDigits (PM.indexByteArray arr off)
