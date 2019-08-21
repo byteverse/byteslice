@@ -1,9 +1,9 @@
 # Revision history for byteslice
 
-## 0.1.2.0 -- 2019-??-??
+## 0.1.2.0 -- 2019-08-21
 
 * Add `Data.Bytes.Mutable` module.
-* Expose `unsafeTake` and `unsafeDrop` in `Data.Bytes`.
+* Add `Data.Bytes` module.
 
 ## 0.1.1.0 -- 2019-07-03
 
