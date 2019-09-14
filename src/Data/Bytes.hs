@@ -1,4 +1,5 @@
 {-# language BangPatterns #-}
+{-# language MagicHash #-}
 {-# language TypeApplications #-}
 
 module Data.Bytes
@@ -10,6 +11,9 @@ module Data.Bytes
     -- * Filtering
   , takeWhile
   , dropWhile
+    -- * Equality
+  , isPrefixOf
+  , isSuffixOf
     -- * Unsafe Slicing
   , unsafeTake
   , unsafeDrop
@@ -23,10 +27,11 @@ module Data.Bytes
 import Prelude hiding (length,takeWhile,dropWhile,null)
 
 import Data.Bytes.Types (Bytes(Bytes))
-import Data.Primitive (ByteArray)
+import Data.Primitive (ByteArray(ByteArray))
 import Data.Word (Word8)
 import Data.Char (ord)
 import Control.Monad.ST.Run (runByteArrayST)
+import GHC.Exts (Int(I#))
 
 import qualified Data.Primitive as PM
 import qualified GHC.Exts as Exts
@@ -38,6 +43,25 @@ null (Bytes _ _ len) = len == 0
 -- | The length of a slice of bytes.
 length :: Bytes -> Int
 length (Bytes _ _ len) = len
+
+-- | Is the first argument a prefix of the second argument?
+isPrefixOf :: Bytes -> Bytes -> Bool
+isPrefixOf (Bytes a aOff aLen) (Bytes b bOff bLen) =
+  -- For prefix and suffix testing, we do not use
+  -- the sameByteArray optimization that we use in
+  -- the Eq instance. Prefix and suffix testing seldom 
+  -- compares a byte array with the same in-memory
+  -- byte array.
+  if aLen <= bLen
+    then compareByteArrays a aOff b bOff aLen == EQ
+    else False
+
+-- | Is the first argument a suffix of the second argument?
+isSuffixOf :: Bytes -> Bytes -> Bool
+isSuffixOf (Bytes a aOff aLen) (Bytes b bOff bLen) =
+  if aLen <= bLen
+    then compareByteArrays a aOff b (bOff + bLen - aLen) aLen == EQ
+    else False
 
 -- | Take bytes while the predicate is true.
 takeWhile :: (Word8 -> Bool) -> Bytes -> Bytes
@@ -101,3 +125,7 @@ fromAsciiString = fromByteArray . Exts.fromList . map (fromIntegral @Int @Word8 
 fromByteArray :: ByteArray -> Bytes
 fromByteArray b = Bytes b 0 (PM.sizeofByteArray b)
 
+compareByteArrays :: ByteArray -> Int -> ByteArray -> Int -> Int -> Ordering
+{-# INLINE compareByteArrays #-}
+compareByteArrays (ByteArray ba1#) (I# off1#) (ByteArray ba2#) (I# off2#) (I# n#) =
+  compare (I# (Exts.compareByteArrays# ba1# off1# ba2# off2# n#)) 0

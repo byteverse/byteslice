@@ -76,14 +76,12 @@ word4ToChar w = if w < 10
   else unsafeChr (ord 'a' + (fromIntegral w) - 10)
 
 instance Eq Bytes where
-  {-# INLINE (==) #-}
   Bytes arr1 off1 len1 == Bytes arr2 off2 len2
     | len1 /= len2 = False
     | sameByteArray arr1 arr2 && off1 == off2 = True
     | otherwise = compareByteArrays arr1 off1 arr2 off2 len1 == EQ
 
 instance Ord Bytes where
-  {-# INLINE compare #-}
   compare (Bytes arr1 off1 len1) (Bytes arr2 off2 len2)
     | sameByteArray arr1 arr2 && off1 == off2 && len1 == len2 = EQ
     | otherwise = compareByteArrays arr1 off1 arr2 off2 len1
