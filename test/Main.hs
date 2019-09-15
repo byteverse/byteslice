@@ -38,10 +38,18 @@ tests = testGroup "Bytes"
     , testCase "B" $ THU.assertBool "" $
         not (Bytes.isSuffixOf (bytes "h") (bytes "hey man"))
     ]
+  , testProperty "foldl" $ \(x :: Word8) (xs :: [Word8]) ->
+      List.foldl (-) 0 xs
+      ===
+      Bytes.foldl (-) 0 (Bytes.unsafeDrop 1 (Exts.fromList (x : xs)))
   , testProperty "foldl'" $ \(x :: Word8) (xs :: [Word8]) ->
       List.foldl' (-) 0 xs
       ===
       Bytes.foldl' (-) 0 (Bytes.unsafeDrop 1 (Exts.fromList (x : xs)))
+  , testProperty "foldr" $ \(x :: Word8) (xs :: [Word8]) ->
+      Foldable.foldr (-) 0 xs
+      ===
+      Bytes.foldr (-) 0 (Bytes.unsafeDrop 1 (Exts.fromList (x : xs)))
   , testProperty "foldr'" $ \(x :: Word8) (xs :: [Word8]) ->
       Foldable.foldr' (-) 0 xs
       ===

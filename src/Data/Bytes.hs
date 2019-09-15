@@ -12,7 +12,9 @@ module Data.Bytes
   , takeWhile
   , dropWhile
     -- * Folds
+  , foldl
   , foldl'
+  , foldr
   , foldr'
     -- * Equality
   , isPrefixOf
@@ -27,7 +29,7 @@ module Data.Bytes
   , fromByteArray
   ) where
 
-import Prelude hiding (length,takeWhile,dropWhile,null)
+import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr)
 
 import Data.Bytes.Types (Bytes(Bytes))
 import Data.Primitive (ByteArray(ByteArray))
@@ -101,7 +103,25 @@ countWhile k (Bytes arr off0 len0) = go off0 len0 0 where
       else n
     else n
 
--- | Strict left fold over bytes.
+-- | Left fold over bytes, non-strict in the accumulator.
+foldl :: (a -> Word8 -> a) -> a -> Bytes -> a
+{-# inline foldl #-}
+foldl f a0 (Bytes arr off0 len0) =
+  go (off0 + len0 - 1) (len0 - 1) 
+  where
+  go !off !ix = case ix of
+    (-1) -> a0
+    _ -> f (go (off - 1) (ix - 1)) (PM.indexByteArray arr off)
+
+-- | Right fold over bytes, non-strict in the accumulator.
+foldr :: (Word8 -> a -> a) -> a -> Bytes -> a
+{-# inline foldr #-}
+foldr f a0 (Bytes arr off0 len0) = go off0 len0 where
+  go !off !len = case len of
+    0 -> a0
+    _ -> f (PM.indexByteArray arr off) (go (off + 1) (len - 1))
+
+-- | Left fold over bytes, strict in the accumulator.
 foldl' :: (a -> Word8 -> a) -> a -> Bytes -> a
 {-# inline foldl' #-}
 foldl' f a0 (Bytes arr off0 len0) = go a0 off0 len0 where
@@ -109,7 +129,7 @@ foldl' f a0 (Bytes arr off0 len0) = go a0 off0 len0 where
     0 -> a
     _ -> go (f a (PM.indexByteArray arr off)) (off + 1) (len - 1)
 
--- | Strict right fold over bytes.
+-- | Right fold over bytes, strict in the accumulator.
 foldr' :: (Word8 -> a -> a) -> a -> Bytes -> a
 {-# inline foldr' #-}
 foldr' f a0 (Bytes arr off0 len0) =
