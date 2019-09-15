@@ -11,6 +11,9 @@ module Data.Bytes
     -- * Filtering
   , takeWhile
   , dropWhile
+    -- * Folds
+  , foldl'
+  , foldr'
     -- * Equality
   , isPrefixOf
   , isSuffixOf
@@ -97,6 +100,24 @@ countWhile k (Bytes arr off0 len0) = go off0 len0 0 where
       then go (off + 1) (len - 1) (n + 1)
       else n
     else n
+
+-- | Strict left fold over bytes.
+foldl' :: (a -> Word8 -> a) -> a -> Bytes -> a
+{-# inline foldl' #-}
+foldl' f a0 (Bytes arr off0 len0) = go a0 off0 len0 where
+  go !a !off !len = case len of
+    0 -> a
+    _ -> go (f a (PM.indexByteArray arr off)) (off + 1) (len - 1)
+
+-- | Strict right fold over bytes.
+foldr' :: (Word8 -> a -> a) -> a -> Bytes -> a
+{-# inline foldr' #-}
+foldr' f a0 (Bytes arr off0 len0) =
+  go a0 (off0 + len0 - 1) (len0 - 1) 
+  where
+  go !a !off !ix = case ix of
+    (-1) -> a
+    _ -> go (f (PM.indexByteArray arr off) a) (off - 1) (ix - 1)
 
 -- | Convert the sliced 'Bytes' to an unsliced 'ByteArray'. This
 -- reuses the array backing the sliced 'Bytes' if the slicing metadata

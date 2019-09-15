@@ -14,6 +14,8 @@ import Test.Tasty.HUnit ((@=?),testCase)
 import Test.Tasty.QuickCheck ((===),testProperty)
 
 import qualified Data.Bytes as Bytes
+import qualified Data.Foldable as Foldable
+import qualified Data.List as List
 import qualified Data.Primitive as PM
 import qualified GHC.Exts as Exts
 import qualified Test.Tasty.HUnit as THU
@@ -36,6 +38,14 @@ tests = testGroup "Bytes"
     , testCase "B" $ THU.assertBool "" $
         not (Bytes.isSuffixOf (bytes "h") (bytes "hey man"))
     ]
+  , testProperty "foldl'" $ \(x :: Word8) (xs :: [Word8]) ->
+      List.foldl' (-) 0 xs
+      ===
+      Bytes.foldl' (-) 0 (Bytes.unsafeDrop 1 (Exts.fromList (x : xs)))
+  , testProperty "foldr'" $ \(x :: Word8) (xs :: [Word8]) ->
+      Foldable.foldr' (-) 0 xs
+      ===
+      Bytes.foldr' (-) 0 (Bytes.unsafeDrop 1 (Exts.fromList (x : xs)))
   ]
 
 bytes :: String -> Bytes
