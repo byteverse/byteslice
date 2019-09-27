@@ -27,16 +27,17 @@ module Data.Bytes
   , toByteArrayClone
   , fromAsciiString
   , fromByteArray
+  , toLatinString
   ) where
 
 import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr)
 
-import Data.Bytes.Types (Bytes(Bytes))
-import Data.Primitive (ByteArray(ByteArray))
-import Data.Word (Word8)
-import Data.Char (ord)
 import Control.Monad.ST.Run (runByteArrayST)
-import GHC.Exts (Int(I#))
+import Data.Bytes.Types (Bytes(Bytes))
+import Data.Char (ord)
+import Data.Primitive (ByteArray(ByteArray))
+import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
+import GHC.Word (Word8(W8#))
 
 import qualified Data.Primitive as PM
 import qualified GHC.Exts as Exts
@@ -161,6 +162,10 @@ toByteArrayClone (Bytes arr off len) = runByteArrayST $ do
 --   in the ASCII block.
 fromAsciiString :: String -> Bytes
 fromAsciiString = fromByteArray . Exts.fromList . map (fromIntegral @Int @Word8 . ord)
+
+-- | Interpret a byte sequence as text encoded by ISO-8859-1.
+toLatinString :: Bytes -> String
+toLatinString = foldr (\(W8# w) xs -> C# (chr# (word2Int# w)) : xs) []
 
 -- | Create a slice of 'Bytes' that spans the entire argument array.
 fromByteArray :: ByteArray -> Bytes
