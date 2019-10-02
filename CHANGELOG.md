@@ -3,6 +3,8 @@
 ## 0.1.4.0 -- 2019-??-??
 
 * Add `toLatinString`.
+* Add `stripPrefix`, `stripSuffix`, `stripOptionalPrefix`, and
+  `stripOptionalSuffix`.
 
 ## 0.1.3.0 -- 2019-09-15
 

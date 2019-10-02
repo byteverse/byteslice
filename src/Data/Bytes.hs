@@ -16,9 +16,13 @@ module Data.Bytes
   , foldl'
   , foldr
   , foldr'
-    -- * Equality
+    -- * Prefix and Suffix
   , isPrefixOf
   , isSuffixOf
+  , stripPrefix
+  , stripOptionalPrefix
+  , stripSuffix
+  , stripOptionalSuffix
     -- * Unsafe Slicing
   , unsafeTake
   , unsafeDrop
@@ -33,7 +37,7 @@ module Data.Bytes
 import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr)
 
 import Control.Monad.ST.Run (runByteArrayST)
-import Data.Bytes.Types (Bytes(Bytes))
+import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
 import Data.Primitive (ByteArray(ByteArray))
 import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
@@ -68,6 +72,36 @@ isSuffixOf (Bytes a aOff aLen) (Bytes b bOff bLen) =
   if aLen <= bLen
     then compareByteArrays a aOff b (bOff + bLen - aLen) aLen == EQ
     else False
+
+-- | /O(n)/ Return the suffix of the second string if its prefix
+-- matches the entire first string.
+stripPrefix :: Bytes -> Bytes -> Maybe Bytes
+stripPrefix !pre !str = if pre `isPrefixOf` str
+  then Just (Bytes (array str) (offset str + length pre) (length str - length pre))
+  else Nothing
+
+-- | /O(n)/ Return the suffix of the second string if its prefix
+-- matches the entire first string. Otherwise, return the second
+-- string unchanged.
+stripOptionalPrefix :: Bytes -> Bytes -> Bytes
+stripOptionalPrefix !pre !str = if pre `isPrefixOf` str
+  then Bytes (array str) (offset str + length pre) (length str - length pre)
+  else str
+
+-- | /O(n)/ Return the prefix of the second string if its suffix
+-- matches the entire first string.
+stripSuffix :: Bytes -> Bytes -> Maybe Bytes
+stripSuffix !suf !str = if suf `isSuffixOf` str
+  then Just (Bytes (array str) (offset str) (length str - length suf))
+  else Nothing
+
+-- | /O(n)/ Return the prefix of the second string if its suffix
+-- matches the entire first string. Otherwise, return the second
+-- string unchanged.
+stripOptionalSuffix :: Bytes -> Bytes -> Bytes
+stripOptionalSuffix !suf !str = if suf `isSuffixOf` str
+  then Bytes (array str) (offset str) (length str - length suf)
+  else str
 
 -- | Take bytes while the predicate is true.
 takeWhile :: (Word8 -> Bool) -> Bytes -> Bytes

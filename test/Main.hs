@@ -19,7 +19,6 @@ import qualified Data.List as List
 import qualified Data.Primitive as PM
 import qualified GHC.Exts as Exts
 import qualified Test.Tasty.HUnit as THU
-import qualified Test.Tasty.QuickCheck as QC
 
 main :: IO ()
 main = defaultMain tests
@@ -37,6 +36,16 @@ tests = testGroup "Bytes"
         Bytes.isSuffixOf (bytes "an") (bytes "hey man")
     , testCase "B" $ THU.assertBool "" $
         not (Bytes.isSuffixOf (bytes "h") (bytes "hey man"))
+    ]
+  , testGroup "stripOptionalSuffix"
+    [ testCase "A" $
+        Bytes.fromAsciiString "hey m"
+        @=?
+        Bytes.stripOptionalSuffix (bytes "an") (bytes "hey man")
+    , testCase "B" $
+        Bytes.fromAsciiString "hey man"
+        @=?
+        Bytes.stripOptionalSuffix (bytes "h") (bytes "hey man")
     ]
   , testProperty "foldl" $ \(x :: Word8) (xs :: [Word8]) ->
       List.foldl (-) 0 xs
