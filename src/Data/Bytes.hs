@@ -11,6 +11,8 @@ module Data.Bytes
     -- * Filtering
   , takeWhile
   , dropWhile
+  , takeWhileEnd
+  , dropWhileEnd
     -- * Folds
   , foldl
   , foldl'
@@ -113,6 +115,22 @@ dropWhile :: (Word8 -> Bool) -> Bytes -> Bytes
 {-# inline dropWhile #-}
 dropWhile k b = unsafeDrop (countWhile k b) b
 
+-- | /O(n)/ 'dropWhileEnd' @p@ @t@ returns the prefix remaining after
+-- dropping characters that satisfy the predicate @p@ from the end of
+-- @t@.
+dropWhileEnd :: (Word8 -> Bool) -> Bytes -> Bytes
+{-# inline dropWhileEnd #-}
+dropWhileEnd k !b = unsafeTake (length b - countWhileEnd k b) b
+
+-- | /O(n)/ 'dropWhileEnd' @p@ @t@ returns the prefix remaining after
+-- dropping characters that satisfy the predicate @p@ from the end of
+-- @t@.
+takeWhileEnd :: (Word8 -> Bool) -> Bytes -> Bytes
+{-# inline takeWhileEnd #-}
+takeWhileEnd k !b =
+  let n = countWhileEnd k b
+   in Bytes (array b) (offset b + length b - n) n
+
 -- | Take the first @n@ bytes from the argument. Precondition: @n ≤ len@
 unsafeTake :: Int -> Bytes -> Bytes
 {-# inline unsafeTake #-}
@@ -135,6 +153,17 @@ countWhile k (Bytes arr off0 len0) = go off0 len0 0 where
   go !off !len !n = if len > 0
     then if k (PM.indexByteArray arr off)
       then go (off + 1) (len - 1) (n + 1)
+      else n
+    else n
+
+-- Internal. Variant of countWhile that starts from the end
+-- of the string instead of the beginning.
+countWhileEnd :: (Word8 -> Bool) -> Bytes -> Int
+{-# inline countWhileEnd #-}
+countWhileEnd k (Bytes arr off0 len0) = go (off0 + len0 - 1) (len0 - 1) 0 where
+  go !off !len !n = if len >= 0
+    then if k (PM.indexByteArray arr off)
+      then go (off - 1) (len - 1) (n + 1)
       else n
     else n
 

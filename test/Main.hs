@@ -47,6 +47,18 @@ tests = testGroup "Bytes"
         @=?
         Bytes.stripOptionalSuffix (bytes "h") (bytes "hey man")
     ]
+  , testGroup "dropWhileEnd"
+    [ testCase "A" $
+        Bytes.fromAsciiString "aabbcc"
+        @=?
+        Bytes.dropWhileEnd (== c2w 'b') (bytes "aabbccbb")
+    ]
+  , testGroup "takeWhileEnd"
+    [ testCase "A" $
+        Bytes.fromAsciiString "bb"
+        @=?
+        Bytes.takeWhileEnd (== c2w 'b') (bytes "aabbccbb")
+    ]
   , testProperty "foldl" $ \(x :: Word8) (xs :: [Word8]) ->
       List.foldl (-) 0 xs
       ===
@@ -71,3 +83,5 @@ bytes s = let b = pack ('x' : s) in Bytes b 1 (PM.sizeofByteArray b - 1)
 pack :: String -> ByteArray
 pack = Exts.fromList . map (fromIntegral @Int @Word8 . ord)
 
+c2w :: Char -> Word8
+c2w = fromIntegral . ord
