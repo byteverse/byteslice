@@ -36,6 +36,7 @@ module Data.Bytes
   , unsafeDrop
     -- * Copying
   , copy
+  , pin
     -- * Conversion
   , toByteArray
   , toByteArrayClone
@@ -48,6 +49,7 @@ import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr)
 
 import Control.Monad.Primitive (PrimMonad,PrimState)
 import Control.Monad.ST.Run (runByteArrayST)
+import Control.Monad.ST (runST)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
 import Data.Primitive (ByteArray(ByteArray),MutableByteArray)
@@ -259,3 +261,16 @@ copy :: PrimMonad m
 {-# inline copy #-}
 copy dst dstIx (Bytes src srcIx len) =
   PM.copyByteArray dst dstIx src srcIx len
+
+-- | Yields a pinned byte sequence whose contents are identical to those
+-- of the original byte sequence. If the @ByteArray@ backing the argument
+-- was already pinned, this simply aliases the argument and does not perform
+-- any copying.
+pin :: Bytes -> Bytes
+pin b@(Bytes arr _ len) = case PM.isByteArrayPinned arr of
+  True -> b
+  False -> runST $ do
+    dst <- PM.newPinnedByteArray len
+    copy dst 0 b
+    r <- PM.unsafeFreezeByteArray dst
+    pure (Bytes r 0 len)
