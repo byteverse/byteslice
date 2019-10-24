@@ -1,5 +1,6 @@
 {-# language BangPatterns #-}
 {-# language MagicHash #-}
+{-# language NamedFieldPuns #-}
 {-# language TypeApplications #-}
 
 module Data.Bytes
@@ -18,6 +19,10 @@ module Data.Bytes
   , foldl'
   , foldr
   , foldr'
+    -- * Splitting
+  , Byte.split
+    -- * Counting
+  , Byte.count
     -- * Prefix and Suffix
   , isPrefixOf
   , isSuffixOf
@@ -46,6 +51,7 @@ import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
 import GHC.Word (Word8(W8#))
 
 import qualified Data.Primitive as PM
+import qualified Data.Bytes.Byte as Byte
 import qualified GHC.Exts as Exts
 
 -- | Is the byte sequence empty?

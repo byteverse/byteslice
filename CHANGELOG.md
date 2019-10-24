@@ -5,6 +5,9 @@
 * Add `toLatinString`.
 * Add `stripPrefix`, `stripSuffix`, `stripOptionalPrefix`, and
   `stripOptionalSuffix`.
+* Add `takeWhileEnd` and `dropWhileEnd`.
+* Add `count`.
+* Add an optimized `split` function.
 
 ## 0.1.3.0 -- 2019-09-15
 

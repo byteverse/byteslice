@@ -14,6 +14,7 @@ import Test.Tasty.HUnit ((@=?),testCase)
 import Test.Tasty.QuickCheck ((===),testProperty)
 
 import qualified Data.Bytes as Bytes
+import qualified Data.ByteString as ByteString
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Primitive as PM
@@ -75,13 +76,29 @@ tests = testGroup "Bytes"
       Foldable.foldr' (-) 0 xs
       ===
       Bytes.foldr' (-) 0 (Bytes.unsafeDrop 1 (Exts.fromList (x : xs)))
+  , testProperty "count" $ \(x :: Word8) (xs :: [Word8]) ->
+      ByteString.count x (ByteString.pack xs)
+      ===
+      Bytes.count x (slicedPack xs)
+  , testProperty "split" $ \(x :: Word8) (xs :: [Word8]) ->
+      ByteString.split x (ByteString.pack xs)
+      ===
+      map bytesToByteString (Bytes.split x (slicedPack xs))
   ]
 
 bytes :: String -> Bytes
 bytes s = let b = pack ('x' : s) in Bytes b 1 (PM.sizeofByteArray b - 1)
+
+slicedPack :: [Word8] -> Bytes
+slicedPack s =
+  let b = Exts.fromList ([0x00] ++ s ++ [0x00])
+   in Bytes b 1 (PM.sizeofByteArray b - 2)
 
 pack :: String -> ByteArray
 pack = Exts.fromList . map (fromIntegral @Int @Word8 . ord)
 
 c2w :: Char -> Word8
 c2w = fromIntegral . ord
+
+bytesToByteString :: Bytes -> ByteString.ByteString
+bytesToByteString = ByteString.pack . Bytes.foldr (:) []
