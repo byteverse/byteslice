@@ -13,6 +13,7 @@
 module Data.Bytes.Byte
   ( count
   , split
+  , splitInit
   ) where
 
 import Prelude hiding (length)
@@ -52,10 +53,39 @@ split !w !bs@Bytes{array,offset=arrIx0} = Exts.build
   !lens = splitLengths w bs
   !lensSz = PM.sizeofPrimArray lens
 
+-- | Variant of 'split' that drops the trailing element. This behaves
+-- correctly even if the byte sequence is empty.
+splitInit :: Word8 -> Bytes -> [Bytes]
+{-# inline splitInit #-}
+splitInit !w !bs@Bytes{array,offset=arrIx0} = Exts.build
+  (\g x0 ->
+    let go !lenIx !arrIx = if lenIx < lensSz
+          then let !len = PM.indexPrimArray lens lenIx in 
+            g (Bytes array arrIx len) (go (lenIx + 1) (arrIx + len + 1))
+          else x0
+     in go 0 arrIx0
+  )
+  where
+  -- Remember, the resulting array from splitLengthsAlt always has
+  -- a length of at least one.
+  !lens = splitLengthsAlt w bs
+  !lensSz = PM.sizeofPrimArray lens - 1
+
 splitLengths :: Word8 -> Bytes -> PrimArray Int
 {-# inline splitLengths #-}
 splitLengths (W8# b) Bytes{array=ByteArray arr,offset=I# off,length=I# len} =
   PrimArray (splitLengths# b arr off len)
+
+-- Internal function. This is just like splitLengths except that
+-- it does not treat the empty byte sequences specially. The result
+-- for that byte sequence is a singleton array with the element zero.
+splitLengthsAlt :: Word8 -> Bytes -> PrimArray Int
+splitLengthsAlt b Bytes{array=ByteArray arr#,offset=off,length=len} = runPrimArrayST do
+  let !n = count_ba arr# off len b
+  dst@(MutablePrimArray dst# ) :: MutablePrimArray s Int <- PM.newPrimArray (n + 1)
+  total <- unsafeIOToST (memchr_ba_many arr# off dst# n b)
+  PM.writePrimArray dst n (len - total)
+  PM.unsafeFreezePrimArray dst
 
 -- Internal function. When the argument is the empty byte sequence, this
 -- returns an empty array of offsets.

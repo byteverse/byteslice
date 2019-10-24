@@ -21,6 +21,7 @@ module Data.Bytes
   , foldr'
     -- * Splitting
   , Byte.split
+  , Byte.splitInit
     -- * Counting
   , Byte.count
     -- * Prefix and Suffix

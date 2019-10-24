@@ -84,6 +84,12 @@ tests = testGroup "Bytes"
       ByteString.split x (ByteString.pack xs)
       ===
       map bytesToByteString (Bytes.split x (slicedPack xs))
+  , testProperty "splitInit" $ \(x :: Word8) (xs :: [Word8]) -> case xs of
+      [] -> Bytes.splitInit x (slicedPack xs) === []
+      _ -> 
+        List.init (ByteString.split x (ByteString.pack xs))
+        ===
+        map bytesToByteString (Bytes.splitInit x (slicedPack xs))
   ]
 
 bytes :: String -> Bytes
