@@ -122,16 +122,15 @@ dropWhile :: (Word8 -> Bool) -> Bytes -> Bytes
 {-# inline dropWhile #-}
 dropWhile k b = unsafeDrop (countWhile k b) b
 
--- | /O(n)/ 'dropWhileEnd' @p@ @t@ returns the prefix remaining after
+-- | /O(n)/ 'dropWhileEnd' @p@ @b@ returns the prefix remaining after
 -- dropping characters that satisfy the predicate @p@ from the end of
 -- @t@.
 dropWhileEnd :: (Word8 -> Bool) -> Bytes -> Bytes
 {-# inline dropWhileEnd #-}
 dropWhileEnd k !b = unsafeTake (length b - countWhileEnd k b) b
 
--- | /O(n)/ 'dropWhileEnd' @p@ @t@ returns the prefix remaining after
--- dropping characters that satisfy the predicate @p@ from the end of
--- @t@.
+-- | /O(n)/ 'takeWhileEnd' @p@ @b@ returns the longest suffix of
+-- elements that satisfy predicate @p@.
 takeWhileEnd :: (Word8 -> Bool) -> Bytes -> Bytes
 {-# inline takeWhileEnd #-}
 takeWhileEnd k !b =
