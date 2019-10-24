@@ -34,6 +34,8 @@ module Data.Bytes
     -- * Unsafe Slicing
   , unsafeTake
   , unsafeDrop
+    -- * Copying
+  , copy
     -- * Conversion
   , toByteArray
   , toByteArrayClone
@@ -44,10 +46,11 @@ module Data.Bytes
 
 import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr)
 
+import Control.Monad.Primitive (PrimMonad,PrimState)
 import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
-import Data.Primitive (ByteArray(ByteArray))
+import Data.Primitive (ByteArray(ByteArray),MutableByteArray)
 import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
 import GHC.Word (Word8(W8#))
 
@@ -244,3 +247,15 @@ compareByteArrays :: ByteArray -> Int -> ByteArray -> Int -> Int -> Ordering
 {-# INLINE compareByteArrays #-}
 compareByteArrays (ByteArray ba1#) (I# off1#) (ByteArray ba2#) (I# off2#) (I# n#) =
   compare (I# (Exts.compareByteArrays# ba1# off1# ba2# off2# n#)) 0
+
+-- | Copy the byte sequence into a mutable buffer. The buffer must have
+-- enough space to accomodate the byte sequence, but this this is not
+-- checked.
+copy :: PrimMonad m
+  => MutableByteArray (PrimState m) -- ^ Destination
+  -> Int -- ^ Destination Offset
+  -> Bytes -- ^ Source
+  -> m ()
+{-# inline copy #-}
+copy dst dstIx (Bytes src srcIx len) =
+  PM.copyByteArray dst dstIx src srcIx len
