@@ -2,6 +2,7 @@
 {-# language MagicHash #-}
 {-# language NamedFieldPuns #-}
 {-# language TypeApplications #-}
+{-# language UnboxedTuples #-}
 
 module Data.Bytes
   ( -- * Types
@@ -36,7 +37,10 @@ module Data.Bytes
   , unsafeDrop
     -- * Copying
   , copy
+    -- * Pointers
   , pin
+  , contents
+  , touch
     -- * Conversion
   , toByteArray
   , toByteArrayClone
@@ -47,7 +51,7 @@ module Data.Bytes
 
 import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr)
 
-import Control.Monad.Primitive (PrimMonad,PrimState)
+import Control.Monad.Primitive (PrimMonad,PrimState,primitive_,unsafeIOToPrim)
 import Control.Monad.ST.Run (runByteArrayST)
 import Control.Monad.ST (runST)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
@@ -55,6 +59,7 @@ import Data.Char (ord)
 import Data.Primitive (ByteArray(ByteArray),MutableByteArray)
 import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
 import GHC.Word (Word8(W8#))
+import Foreign.Ptr (Ptr,plusPtr)
 
 import qualified Data.Primitive as PM
 import qualified Data.Bytes.Byte as Byte
@@ -274,3 +279,15 @@ pin b@(Bytes arr _ len) = case PM.isByteArrayPinned arr of
     copy dst 0 b
     r <- PM.unsafeFreezeByteArray dst
     pure (Bytes r 0 len)
+
+-- | Yields a pointer to the beginning of the byte sequence. It is only safe
+-- to call this on a 'Bytes' backed by a pinned @ByteArray@.
+contents :: Bytes -> Ptr Word8
+contents (Bytes arr off _) = plusPtr (PM.byteArrayContents arr) off
+
+-- | Touch the byte array backing the byte sequence. This sometimes needed
+-- after calling 'contents' so that the @ByteArray@ does not get garbage
+-- collected.
+touch :: PrimMonad m => Bytes -> m ()
+touch (Bytes (ByteArray arr) _ _) = unsafeIOToPrim
+  (primitive_ (\s -> Exts.touch# arr s))

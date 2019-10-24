@@ -11,6 +11,7 @@
 * Add `splitInit`.
 * Add `copy`.
 * Add `pin`.
+* Add `touch`.
 
 ## 0.1.3.0 -- 2019-09-15
 
