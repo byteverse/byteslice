@@ -90,6 +90,14 @@ tests = testGroup "Bytes"
         List.init (ByteString.split x (ByteString.pack xs))
         ===
         map bytesToByteString (Bytes.splitInit x (slicedPack xs))
+  , testCase "splitInit-A" $
+      [Bytes.fromAsciiString "hello", Bytes.fromAsciiString "world"]
+      @=?
+      (Bytes.splitInit 0x0A (Bytes.fromAsciiString "hello\nworld\n"))
+  , testCase "splitInit-B" $
+      [Bytes.fromAsciiString "hello", Bytes.fromAsciiString "world"]
+      @=?
+      (Bytes.splitInit 0x0A (Bytes.fromAsciiString "hello\nworld\nthere"))
   ]
 
 bytes :: String -> Bytes
