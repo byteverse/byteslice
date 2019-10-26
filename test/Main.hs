@@ -63,6 +63,10 @@ tests = testGroup "Bytes"
         Bytes.fromAsciiString ""
         @=?
         Bytes.takeWhileEnd (/= c2w '\n') (bytes "aabbccbb\n")
+    , testCase "C" $
+        slicedPack [0x1,0x2,0x3]
+        @=?
+        Bytes.takeWhileEnd (/= 0x0) (slicedPack [0x1,0x0,0x1,0x2,0x3])
     ]
   , testProperty "foldl" $ \(x :: Word8) (xs :: [Word8]) ->
       List.foldl (-) 0 xs
