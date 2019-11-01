@@ -20,6 +20,8 @@ module Data.Bytes
   , foldl'
   , foldr
   , foldr'
+    -- * Common Folds
+  , elem
     -- * Splitting
   , Byte.split
   , Byte.splitInit
@@ -49,7 +51,7 @@ module Data.Bytes
   , toLatinString
   ) where
 
-import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr)
+import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem)
 
 import Control.Monad.Primitive (PrimMonad,PrimState,primitive_,unsafeIOToPrim)
 import Control.Monad.ST.Run (runByteArrayST)
@@ -58,6 +60,7 @@ import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
 import Data.Primitive (ByteArray(ByteArray),MutableByteArray)
 import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
+import GHC.Exts (Word#,Int#)
 import GHC.Word (Word8(W8#))
 import Foreign.Ptr (Ptr,plusPtr)
 
@@ -121,6 +124,16 @@ stripOptionalSuffix :: Bytes -> Bytes -> Bytes
 stripOptionalSuffix !suf !str = if suf `isSuffixOf` str
   then Bytes (array str) (offset str) (length str - length suf)
   else str
+
+elem :: Word8 -> Bytes -> Bool
+elem (W8# w) b = case elemLoop 0# w b of
+  1# -> True
+  _ -> False
+
+elemLoop :: Int# -> Word# -> Bytes -> Int#
+elemLoop !r !w (Bytes arr@(ByteArray arr# ) off@(I# off# ) len) = case len of
+  0 -> r
+  _ -> elemLoop (Exts.orI# r (Exts.eqWord# w (Exts.indexWord8Array# arr# off# ) )) w (Bytes arr (off + 1) (len - 1))
 
 -- | Take bytes while the predicate is true.
 takeWhile :: (Word8 -> Bool) -> Bytes -> Bytes

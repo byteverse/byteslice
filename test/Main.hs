@@ -68,6 +68,10 @@ tests = testGroup "Bytes"
         @=?
         Bytes.takeWhileEnd (/= 0x0) (slicedPack [0x1,0x0,0x1,0x2,0x3])
     ]
+  , testProperty "elem" $ \(x :: Word8) (xs :: [Word8]) ->
+      List.elem x xs
+      ===
+      Bytes.elem x (Bytes.unsafeDrop 1 (Exts.fromList (x : xs)))
   , testProperty "foldl" $ \(x :: Word8) (xs :: [Word8]) ->
       List.foldl (-) 0 xs
       ===
