@@ -9,9 +9,11 @@
 * Add `count`.
 * Add an optimized `split` function.
 * Add `splitInit`.
+* Add `splitFirst`.
 * Add `copy`.
 * Add `pin`.
 * Add `touch`.
+* ADd `elem`.
 
 ## 0.1.3.0 -- 2019-09-15
 

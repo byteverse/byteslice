@@ -11,7 +11,7 @@ import Data.Char (ord)
 import Data.Bytes.Types (Bytes(Bytes))
 import Test.Tasty (defaultMain,testGroup,TestTree)
 import Test.Tasty.HUnit ((@=?),testCase)
-import Test.Tasty.QuickCheck ((===),testProperty)
+import Test.Tasty.QuickCheck ((===),testProperty,property,Discard(Discard))
 
 import qualified Data.Bytes as Bytes
 import qualified Data.ByteString as ByteString
@@ -110,6 +110,14 @@ tests = testGroup "Bytes"
       [Bytes.fromAsciiString "hello", Bytes.fromAsciiString "world"]
       @=?
       (Bytes.splitInit 0x0A (Bytes.fromAsciiString "hello\nworld\nthere"))
+  , testProperty "splitFirst" $ \(x :: Word8) (xs :: [Word8]) ->
+      case ByteString.split x (ByteString.pack xs) of
+        [] -> Bytes.splitFirst x (slicedPack xs) === Nothing
+        [_] -> Bytes.splitFirst x (slicedPack xs) === Nothing
+        [y1,z1] -> case Bytes.splitFirst x (slicedPack xs) of
+          Nothing -> property False
+          Just (y2,z2) -> (y1,z1) === (bytesToByteString y2, bytesToByteString z2)
+        _ -> property Discard
   ]
 
 bytes :: String -> Bytes

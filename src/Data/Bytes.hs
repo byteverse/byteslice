@@ -25,6 +25,7 @@ module Data.Bytes
     -- * Splitting
   , Byte.split
   , Byte.splitInit
+  , splitFirst
     -- * Counting
   , Byte.count
     -- * Prefix and Suffix
@@ -124,6 +125,28 @@ stripOptionalSuffix :: Bytes -> Bytes -> Bytes
 stripOptionalSuffix !suf !str = if suf `isSuffixOf` str
   then Bytes (array str) (offset str) (length str - length suf)
   else str
+
+-- | Split a byte sequence on the first occurrence of the target
+-- byte. The target is removed from the result. For example:
+--
+-- >>> splitOnce 0xA [0x1,0x2,0xA,0xB]
+-- Just ([0x1,0x2],[0xB])
+splitFirst :: Word8 -> Bytes -> Maybe (Bytes,Bytes)
+{-# inline splitFirst #-}
+splitFirst w b@(Bytes arr off len) = case elemIndexLoop# w b of
+  (-1#) -> Nothing
+  i# -> let i = I# i# in
+    Just (Bytes arr off (i - off), Bytes arr (i + 1) (len - (1 + i - off)))
+
+-- This returns the offset into the byte array. This is not an index
+-- that will mean anything to the end user, so it cannot be returned
+-- to them.
+elemIndexLoop# :: Word8 -> Bytes -> Int#
+elemIndexLoop# !w (Bytes arr off@(I# off# ) len) = case len of
+  0 -> (-1#)
+  _ -> if PM.indexByteArray arr off == w
+    then off#
+    else elemIndexLoop# w (Bytes arr (off + 1) (len - 1))
 
 elem :: Word8 -> Bytes -> Bool
 elem (W8# w) b = case elemLoop 0# w b of
