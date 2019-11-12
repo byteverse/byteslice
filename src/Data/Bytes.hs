@@ -38,6 +38,7 @@ module Data.Bytes
     -- * Unsafe Slicing
   , unsafeTake
   , unsafeDrop
+  , unsafeIndex
     -- * Copying
   , copy
     -- * Pointers
@@ -167,6 +168,11 @@ takeWhile k b = unsafeTake (countWhile k b) b
 dropWhile :: (Word8 -> Bool) -> Bytes -> Bytes
 {-# inline dropWhile #-}
 dropWhile k b = unsafeDrop (countWhile k b) b
+
+-- | Index into the byte sequence at the given position. This index
+-- must be less than the length.
+unsafeIndex :: Bytes -> Int -> Word8
+unsafeIndex (Bytes arr off _) ix = PM.indexByteArray arr (off + ix)
 
 -- | /O(n)/ 'dropWhileEnd' @p@ @b@ returns the prefix remaining after
 -- dropping characters that satisfy the predicate @p@ from the end of

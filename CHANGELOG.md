@@ -1,6 +1,6 @@
 # Revision history for byteslice
 
-## 0.1.4.0 -- 2019-??-??
+## 0.1.4.0 -- 2019-11-12
 
 * Add `toLatinString`.
 * Add `stripPrefix`, `stripSuffix`, `stripOptionalPrefix`, and
@@ -13,7 +13,8 @@
 * Add `copy`.
 * Add `pin`.
 * Add `touch`.
-* ADd `elem`.
+* Add `elem`.
+* Add `unsafeIndex`.
 
 ## 0.1.3.0 -- 2019-09-15
 
