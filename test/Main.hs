@@ -12,6 +12,7 @@ import Data.Bytes.Types (Bytes(Bytes))
 import Test.Tasty (defaultMain,testGroup,TestTree)
 import Test.Tasty.HUnit ((@=?),testCase)
 import Test.Tasty.QuickCheck ((===),testProperty,property,Discard(Discard))
+import Test.Tasty.QuickCheck ((==>))
 
 import qualified Data.Bytes as Bytes
 import qualified Data.ByteString as ByteString
@@ -93,9 +94,15 @@ tests = testGroup "Bytes"
       ===
       Bytes.count x (slicedPack xs)
   , testProperty "split" $ \(x :: Word8) (xs :: [Word8]) ->
+      not (List.null xs)
+      ==>
       ByteString.split x (ByteString.pack xs)
       ===
       map bytesToByteString (Bytes.split x (slicedPack xs))
+  , testProperty "split1" $ \(x :: Word8) (xs :: [Word8]) ->
+      Bytes.split x (slicedPack xs)
+      ===
+      Foldable.toList (Bytes.split1 x (slicedPack xs))
   , testProperty "splitInit" $ \(x :: Word8) (xs :: [Word8]) -> case xs of
       [] -> Bytes.splitInit x (slicedPack xs) === []
       _ -> 

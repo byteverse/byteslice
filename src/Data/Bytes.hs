@@ -24,6 +24,7 @@ module Data.Bytes
   , elem
     -- * Splitting
   , Byte.split
+  , Byte.split1
   , Byte.splitInit
   , splitFirst
     -- * Counting
