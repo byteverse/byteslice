@@ -1,5 +1,15 @@
 # Revision history for byteslice
 
+## 0.2.0.0 -- ????-??-??
+
+* Change behavior of `split`. This function previously had a special case
+  for zero-length byte sequences to mirror the behavior `bytestring`'s
+  behavior. Now, `split` returns a singleton list with the empty byte
+  sequence in this case.
+* Add `split1` so that users who need to take advantage of the non-null
+  guarantee split provides can do so.
+* Make the C code compile on platforms that do not have `rawmemchr`.
+
 ## 0.1.4.0 -- 2019-11-12
 
 * Add `toLatinString`.
