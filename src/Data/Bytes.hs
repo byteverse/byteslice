@@ -26,7 +26,8 @@ module Data.Bytes
   , Byte.split
   , Byte.split1
   , Byte.splitInit
-  , splitFirst
+  , splitOnce
+  , splitTwice
     -- * Counting
   , Byte.count
     -- * Prefix and Suffix
@@ -133,12 +134,31 @@ stripOptionalSuffix !suf !str = if suf `isSuffixOf` str
 --
 -- >>> splitOnce 0xA [0x1,0x2,0xA,0xB]
 -- Just ([0x1,0x2],[0xB])
-splitFirst :: Word8 -> Bytes -> Maybe (Bytes,Bytes)
-{-# inline splitFirst #-}
-splitFirst w b@(Bytes arr off len) = case elemIndexLoop# w b of
+splitOnce :: Word8 -> Bytes -> Maybe (Bytes,Bytes)
+{-# inline splitOnce #-}
+splitOnce w b@(Bytes arr off len) = case elemIndexLoop# w b of
   (-1#) -> Nothing
   i# -> let i = I# i# in
     Just (Bytes arr off (i - off), Bytes arr (i + 1) (len - (1 + i - off)))
+
+-- | Split a byte sequence on the first and second occurrences
+-- of the target byte. The target is removed from the result.
+-- For example:
+--
+-- >>> splitTwice 0xA [0x1,0x2,0xA,0xB,0xA,0xA,0xA]
+-- Just ([0x1,0x2],[0xB],[0xA,0xA])
+splitTwice :: Word8 -> Bytes -> Maybe (Bytes,Bytes,Bytes)
+{-# inline splitTwice #-}
+splitTwice w b@(Bytes arr off len) = case elemIndexLoop# w b of
+  (-1#) -> Nothing
+  i# -> let i = I# i# in
+    case elemIndexLoop# w (Bytes arr (i + 1) (len - (1 + i - off))) of
+      (-1#) -> Nothing
+      j# -> let j = I# j# in Just
+        ( Bytes arr off (i - off)
+        , Bytes arr (i + 1) (j - (i + 1))
+        , Bytes arr (j + 1) (len - (1 + j - off))
+        )
 
 -- This returns the offset into the byte array. This is not an index
 -- that will mean anything to the end user, so it cannot be returned
