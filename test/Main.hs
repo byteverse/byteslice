@@ -117,14 +117,20 @@ tests = testGroup "Bytes"
       [Bytes.fromAsciiString "hello", Bytes.fromAsciiString "world"]
       @=?
       (Bytes.splitInit 0x0A (Bytes.fromAsciiString "hello\nworld\nthere"))
-  , testProperty "splitFirst" $ \(x :: Word8) (xs :: [Word8]) ->
+  , testProperty "splitOnce" $ \(x :: Word8) (xs :: [Word8]) ->
       case ByteString.split x (ByteString.pack xs) of
-        [] -> Bytes.splitFirst x (slicedPack xs) === Nothing
-        [_] -> Bytes.splitFirst x (slicedPack xs) === Nothing
-        [y1,z1] -> case Bytes.splitFirst x (slicedPack xs) of
+        [] -> Bytes.splitOnce x (slicedPack xs) === Nothing
+        [_] -> Bytes.splitOnce x (slicedPack xs) === Nothing
+        [y1,z1] -> case Bytes.splitOnce x (slicedPack xs) of
           Nothing -> property False
           Just (y2,z2) -> (y1,z1) === (bytesToByteString y2, bytesToByteString z2)
         _ -> property Discard
+  , testProperty "splitTwice" $ \(xs :: [Word8]) (ys :: [Word8]) (zs :: [Word8]) ->
+      (all (/=0xEF) xs && all (/=0xEF) ys && all (/=0xEF) zs)
+      ==>
+      case Bytes.splitTwice 0xEF (slicedPack (xs ++ [0xEF] ++ ys ++ [0xEF] ++ zs)) of
+        Just r -> r === (slicedPack xs, slicedPack ys, slicedPack zs)
+        Nothing -> property False
   ]
 
 bytes :: String -> Bytes

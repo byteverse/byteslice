@@ -9,6 +9,8 @@
 * Add `split1` so that users who need to take advantage of the non-null
   guarantee split provides can do so.
 * Make the C code compile on platforms that do not have `rawmemchr`.
+* Rename `splitOnce` to `splitFirst`.
+* Add `splitTwice`.
 
 ## 0.1.4.0 -- 2019-11-12
 
