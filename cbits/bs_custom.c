@@ -8,14 +8,25 @@
 // to the sizes buffer. This uses rawmemchr, so the total number of
 // occurrences of the delimiter must be computed in advance. This
 // returns the total length of all pieces processed.
-HsInt memchr_ba_many(unsigned char *p, HsInt off, HsInt *sizes, HsInt sizesLen, unsigned char w) {
+//
+// Portability: On Linux, this uses rawmemchr. On all other platforms,
+// it uses memchr. On Linux, the length of the byte sequence is not
+// used. On other platforms, this is repeatedly decremented to provide
+// an appropriate third argument for memchr.
+HsInt memchr_ba_many(unsigned char *p, HsInt off, HsInt len, HsInt *sizes, HsInt sizesLen, unsigned char w) {
   HsInt szIx, delta, total;
   unsigned char* pos;
   p = p + off;
   total = 0;
   for (szIx = 0; szIx < sizesLen; ++szIx) {
-    pos = (unsigned char*)(rawmemchr((void*)p,w));
-    delta = pos - p;
+#ifdef __linux__
+    pos = (unsigned char*)(rawmemchr((void*)p,(int)w));
+    delta = (HsInt)(pos - p);
+#else
+    pos = (unsigned char*)(memchr((void*)p,(int)w,(size_t)len));
+    delta = (HsInt)(pos - p);
+    len = len - (delta + 1);
+#endif
     sizes[szIx] = delta;
     total = total + delta + 1;
     p = pos + 1;

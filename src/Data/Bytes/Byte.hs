@@ -101,12 +101,12 @@ splitLengthsAlt :: Word8 -> Bytes -> PrimArray Int
 splitLengthsAlt b Bytes{array=ByteArray arr#,offset=off,length=len} = runPrimArrayST do
   let !n = count_ba arr# off len b
   dst@(MutablePrimArray dst# ) :: MutablePrimArray s Int <- PM.newPrimArray (n + 1)
-  total <- unsafeIOToST (memchr_ba_many arr# off dst# n b)
+  total <- unsafeIOToST (memchr_ba_many arr# off len dst# n b)
   PM.writePrimArray dst n (len - total)
   PM.unsafeFreezePrimArray dst
 
 foreign import ccall unsafe "bs_custom.h memchr_ba_many" memchr_ba_many
-  :: ByteArray# -> Int -> MutableByteArray# s -> Int -> Word8 -> IO Int
+  :: ByteArray# -> Int -> Int -> MutableByteArray# s -> Int -> Word8 -> IO Int
 
 foreign import ccall unsafe "bs_custom.h count_ba" count_ba
   :: ByteArray# -> Int -> Int -> Word8 -> Int
