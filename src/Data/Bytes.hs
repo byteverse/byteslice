@@ -37,6 +37,11 @@ module Data.Bytes
   , stripOptionalPrefix
   , stripSuffix
   , stripOptionalSuffix
+    -- * Equality
+  , equalsLatin1
+  , equalsLatin2
+  , equalsLatin3
+  , equalsLatin4
     -- * Unsafe Slicing
   , unsafeTake
   , unsafeDrop
@@ -318,6 +323,40 @@ compareByteArrays :: ByteArray -> Int -> ByteArray -> Int -> Int -> Ordering
 compareByteArrays (ByteArray ba1#) (I# off1#) (ByteArray ba2#) (I# off2#) (I# n#) =
   compare (I# (Exts.compareByteArrays# ba1# off1# ba2# off2# n#)) 0
 
+-- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
+-- a singleton whose element matches the character?
+equalsLatin1 :: Char -> Bytes -> Bool
+equalsLatin1 !c0 (Bytes arr off len) = case len of
+  1 -> c0 == indexCharArray arr off
+  _ -> False
+
+-- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
+-- a doubleton whose elements match the characters?
+equalsLatin2 :: Char -> Char -> Bytes -> Bool
+equalsLatin2 !c0 !c1 (Bytes arr off len) = case len of
+  2 -> c0 == indexCharArray arr off &&
+       c1 == indexCharArray arr (off + 1)
+  _ -> False
+
+-- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
+-- a tripleton whose elements match the characters?
+equalsLatin3 :: Char -> Char -> Char -> Bytes -> Bool
+equalsLatin3 !c0 !c1 !c2 (Bytes arr off len) = case len of
+  3 -> c0 == indexCharArray arr off &&
+       c1 == indexCharArray arr (off + 1) &&
+       c2 == indexCharArray arr (off + 2)
+  _ -> False
+
+-- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
+-- a quadrupleton whose elements match the characters?
+equalsLatin4 :: Char -> Char -> Char -> Char -> Bytes -> Bool
+equalsLatin4 !c0 !c1 !c2 !c3 (Bytes arr off len) = case len of
+  4 -> c0 == indexCharArray arr off &&
+       c1 == indexCharArray arr (off + 1) &&
+       c2 == indexCharArray arr (off + 2) &&
+       c3 == indexCharArray arr (off + 3)
+  _ -> False
+
 -- | Copy the byte sequence into a mutable buffer. The buffer must have
 -- enough space to accomodate the byte sequence, but this this is not
 -- checked.
@@ -354,3 +393,6 @@ contents (Bytes arr off _) = plusPtr (PM.byteArrayContents arr) off
 touch :: PrimMonad m => Bytes -> m ()
 touch (Bytes (ByteArray arr) _ _) = unsafeIOToPrim
   (primitive_ (\s -> Exts.touch# arr s))
+
+indexCharArray :: ByteArray -> Int -> Char
+indexCharArray (ByteArray arr) (I# off) = C# (Exts.indexCharArray# arr off)
