@@ -20,6 +20,8 @@ module Data.Bytes
   , foldl'
   , foldr
   , foldr'
+    -- * Folds with Indices
+  , ifoldl'
     -- * Common Folds
   , elem
     -- * Splitting
@@ -276,6 +278,15 @@ foldl' f a0 (Bytes arr off0 len0) = go a0 off0 len0 where
   go !a !off !len = case len of
     0 -> a
     _ -> go (f a (PM.indexByteArray arr off)) (off + 1) (len - 1)
+
+-- | Left fold over bytes, strict in the accumulator. The reduction function
+-- is applied to each element along with its index.
+ifoldl' :: (a -> Int -> Word8 -> a) -> a -> Bytes -> a
+{-# inline ifoldl' #-}
+ifoldl' f a0 (Bytes arr off0 len0) = go a0 0 off0 len0 where
+  go !a !ix !off !len = case len of
+    0 -> a
+    _ -> go (f a ix (PM.indexByteArray arr off)) (ix + 1) (off + 1) (len - 1)
 
 -- | Right fold over bytes, strict in the accumulator.
 foldr' :: (Word8 -> a -> a) -> a -> Bytes -> a
