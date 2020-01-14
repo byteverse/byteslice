@@ -10,7 +10,7 @@
   guarantee split provides can do so.
 * Make the C code compile on platforms that do not have `rawmemchr`.
 * Rename `splitOnce` to `splitFirst`.
-* Add `splitTwice`.
+* Add `splitTwice` and `splitThrice`.
 * Add `equalsLatin{1,2,3,4}`
 * Add `ifoldl'`.
 

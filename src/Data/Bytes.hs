@@ -30,6 +30,7 @@ module Data.Bytes
   , Byte.splitInit
   , splitOnce
   , splitTwice
+  , splitThrice
     -- * Counting
   , Byte.count
     -- * Prefix and Suffix
@@ -166,6 +167,29 @@ splitTwice w b@(Bytes arr off len) = case elemIndexLoop# w b of
         , Bytes arr (i + 1) (j - (i + 1))
         , Bytes arr (j + 1) (len - (1 + j - off))
         )
+
+-- | Split a byte sequence on the first, second, and third occurrences
+-- of the target byte. The target is removed from the result.
+-- For example:
+--
+-- >>> splitThrice 0xA [0x1,0x2,0xA,0xB,0xA,0xA,0xA]
+-- Just ([0x1,0x2],[0xB],[],[0xA])
+splitThrice :: Word8 -> Bytes -> Maybe (Bytes,Bytes,Bytes,Bytes)
+{-# inline splitThrice #-}
+splitThrice w b@(Bytes arr off len) = case elemIndexLoop# w b of
+  (-1#) -> Nothing
+  i# -> let i = I# i# in
+    case elemIndexLoop# w (Bytes arr (i + 1) (len - (1 + i - off))) of
+      (-1#) -> Nothing
+      j# -> let j = I# j# in
+        case elemIndexLoop# w (Bytes arr (j + 1) (len - (1 + j - off))) of
+          (-1#) -> Nothing
+          k# -> let k = I# k# in Just
+            ( Bytes arr off (i - off)
+            , Bytes arr (i + 1) (j - (i + 1))
+            , Bytes arr (j + 1) (k - (j + 1))
+            , Bytes arr (k + 1) (len - (1 + k - off))
+            )
 
 -- This returns the offset into the byte array. This is not an index
 -- that will mean anything to the end user, so it cannot be returned
