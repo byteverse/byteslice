@@ -11,7 +11,7 @@
 * Make the C code compile on platforms that do not have `rawmemchr`.
 * Rename `splitOnce` to `splitFirst`.
 * Add `splitTwice` and `splitThrice`.
-* Add `equalsLatin{1,2,3,4}`
+* Add `equalsLatin{1,2,3,4,5,6,7}`
 * Add `ifoldl'`.
 
 ## 0.1.4.0 -- 2019-11-12

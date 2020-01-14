@@ -45,6 +45,9 @@ module Data.Bytes
   , equalsLatin2
   , equalsLatin3
   , equalsLatin4
+  , equalsLatin5
+  , equalsLatin6
+  , equalsLatin7
     -- * Unsafe Slicing
   , unsafeTake
   , unsafeDrop
@@ -390,6 +393,42 @@ equalsLatin4 !c0 !c1 !c2 !c3 (Bytes arr off len) = case len of
        c1 == indexCharArray arr (off + 1) &&
        c2 == indexCharArray arr (off + 2) &&
        c3 == indexCharArray arr (off + 3)
+  _ -> False
+
+-- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
+-- a quintupleton whose elements match the characters?
+equalsLatin5 :: Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
+equalsLatin5 !c0 !c1 !c2 !c3 !c4 (Bytes arr off len) = case len of
+  5 -> c0 == indexCharArray arr off &&
+       c1 == indexCharArray arr (off + 1) &&
+       c2 == indexCharArray arr (off + 2) &&
+       c3 == indexCharArray arr (off + 3) &&
+       c4 == indexCharArray arr (off + 4)
+  _ -> False
+
+-- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
+-- a sextupleton whose elements match the characters?
+equalsLatin6 :: Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
+equalsLatin6 !c0 !c1 !c2 !c3 !c4 !c5 (Bytes arr off len) = case len of
+  6 -> c0 == indexCharArray arr off &&
+       c1 == indexCharArray arr (off + 1) &&
+       c2 == indexCharArray arr (off + 2) &&
+       c3 == indexCharArray arr (off + 3) &&
+       c4 == indexCharArray arr (off + 4) &&
+       c5 == indexCharArray arr (off + 5)
+  _ -> False
+
+-- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
+-- a septupleton whose elements match the characters?
+equalsLatin7 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
+equalsLatin7 !c0 !c1 !c2 !c3 !c4 !c5 !c6 (Bytes arr off len) = case len of
+  7 -> c0 == indexCharArray arr off &&
+       c1 == indexCharArray arr (off + 1) &&
+       c2 == indexCharArray arr (off + 2) &&
+       c3 == indexCharArray arr (off + 3) &&
+       c4 == indexCharArray arr (off + 4) &&
+       c5 == indexCharArray arr (off + 5) &&
+       c6 == indexCharArray arr (off + 6)
   _ -> False
 
 -- | Copy the byte sequence into a mutable buffer. The buffer must have
