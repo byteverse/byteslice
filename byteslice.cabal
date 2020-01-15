@@ -20,6 +20,7 @@ extra-source-files: CHANGELOG.md
 library
   exposed-modules:
     Data.Bytes
+    Data.Bytes.Chunks
     Data.Bytes.Mutable
     Data.Bytes.Types
   other-modules:
@@ -48,6 +49,7 @@ test-suite test
     , byteslice
     , bytestring
     , primitive
-    , tasty-hunit
+    , quickcheck-classes >=0.6.4
     , tasty
+    , tasty-hunit
     , tasty-quickcheck

@@ -7,6 +7,8 @@
 module Data.Bytes
   ( -- * Types
     Bytes
+    -- * Constants
+  , empty
     -- * Properties
   , null
   , length
@@ -28,9 +30,9 @@ module Data.Bytes
   , Byte.split
   , Byte.splitNonEmpty
   , Byte.splitInit
-  , splitOnce
-  , splitTwice
-  , splitThrice
+  , split1
+  , split2
+  , split3
     -- * Counting
   , Byte.count
     -- * Prefix and Suffix
@@ -64,24 +66,28 @@ module Data.Bytes
   , fromAsciiString
   , fromByteArray
   , toLatinString
+    -- * I\/O with Handles
+  , hGet
   ) where
 
 import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem)
 
 import Control.Monad.Primitive (PrimMonad,PrimState,primitive_,unsafeIOToPrim)
-import Control.Monad.ST.Run (runByteArrayST)
 import Control.Monad.ST (runST)
+import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
 import Data.Primitive (ByteArray(ByteArray),MutableByteArray)
+import Foreign.Ptr (Ptr,plusPtr)
 import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
 import GHC.Exts (Word#,Int#)
 import GHC.Word (Word8(W8#))
-import Foreign.Ptr (Ptr,plusPtr)
+import System.IO (Handle)
 
-import qualified Data.Primitive as PM
 import qualified Data.Bytes.Byte as Byte
+import qualified Data.Primitive as PM
 import qualified GHC.Exts as Exts
+import qualified System.IO as IO
 
 -- | Is the byte sequence empty?
 null :: Bytes -> Bool
@@ -143,11 +149,11 @@ stripOptionalSuffix !suf !str = if suf `isSuffixOf` str
 -- | Split a byte sequence on the first occurrence of the target
 -- byte. The target is removed from the result. For example:
 --
--- >>> splitOnce 0xA [0x1,0x2,0xA,0xB]
+-- >>> split1 0xA [0x1,0x2,0xA,0xB]
 -- Just ([0x1,0x2],[0xB])
-splitOnce :: Word8 -> Bytes -> Maybe (Bytes,Bytes)
-{-# inline splitOnce #-}
-splitOnce w b@(Bytes arr off len) = case elemIndexLoop# w b of
+split1 :: Word8 -> Bytes -> Maybe (Bytes,Bytes)
+{-# inline split1 #-}
+split1 w b@(Bytes arr off len) = case elemIndexLoop# w b of
   (-1#) -> Nothing
   i# -> let i = I# i# in
     Just (Bytes arr off (i - off), Bytes arr (i + 1) (len - (1 + i - off)))
@@ -156,11 +162,11 @@ splitOnce w b@(Bytes arr off len) = case elemIndexLoop# w b of
 -- of the target byte. The target is removed from the result.
 -- For example:
 --
--- >>> splitTwice 0xA [0x1,0x2,0xA,0xB,0xA,0xA,0xA]
+-- >>> split2 0xA [0x1,0x2,0xA,0xB,0xA,0xA,0xA]
 -- Just ([0x1,0x2],[0xB],[0xA,0xA])
-splitTwice :: Word8 -> Bytes -> Maybe (Bytes,Bytes,Bytes)
-{-# inline splitTwice #-}
-splitTwice w b@(Bytes arr off len) = case elemIndexLoop# w b of
+split2 :: Word8 -> Bytes -> Maybe (Bytes,Bytes,Bytes)
+{-# inline split2 #-}
+split2 w b@(Bytes arr off len) = case elemIndexLoop# w b of
   (-1#) -> Nothing
   i# -> let i = I# i# in
     case elemIndexLoop# w (Bytes arr (i + 1) (len - (1 + i - off))) of
@@ -175,11 +181,11 @@ splitTwice w b@(Bytes arr off len) = case elemIndexLoop# w b of
 -- of the target byte. The target is removed from the result.
 -- For example:
 --
--- >>> splitThrice 0xA [0x1,0x2,0xA,0xB,0xA,0xA,0xA]
+-- >>> split3 0xA [0x1,0x2,0xA,0xB,0xA,0xA,0xA]
 -- Just ([0x1,0x2],[0xB],[],[0xA])
-splitThrice :: Word8 -> Bytes -> Maybe (Bytes,Bytes,Bytes,Bytes)
-{-# inline splitThrice #-}
-splitThrice w b@(Bytes arr off len) = case elemIndexLoop# w b of
+split3 :: Word8 -> Bytes -> Maybe (Bytes,Bytes,Bytes,Bytes)
+{-# inline split3 #-}
+split3 w b@(Bytes arr off len) = case elemIndexLoop# w b of
   (-1#) -> Nothing
   i# -> let i = I# i# in
     case elemIndexLoop# w (Bytes arr (i + 1) (len - (1 + i - off))) of
@@ -470,3 +476,21 @@ touch (Bytes (ByteArray arr) _ _) = unsafeIOToPrim
 
 indexCharArray :: ByteArray -> Int -> Char
 indexCharArray (ByteArray arr) (I# off) = C# (Exts.indexCharArray# arr off)
+
+-- | The empty byte sequence.
+empty :: Bytes
+empty = Bytes mempty 0 0
+
+-- | Read 'Bytes' directly from the specified 'Handle'. The resulting
+-- 'Bytes' are pinned. This is implemented with 'hGetBuf'.
+hGet :: Handle -> Int -> IO Bytes
+hGet h i = createPinnedAndTrim i (\p -> IO.hGetBuf h p i)
+
+createPinnedAndTrim :: Int -> (Ptr Word8 -> IO Int) -> IO Bytes
+{-# inline createPinnedAndTrim #-}
+createPinnedAndTrim maxSz f = do
+  arr@(PM.MutableByteArray arr#) <- PM.newPinnedByteArray maxSz
+  sz <- f (PM.mutableByteArrayContents arr)
+  PM.shrinkMutablePrimArray (PM.MutablePrimArray @Exts.RealWorld @Word8 arr#) sz
+  r <- PM.unsafeFreezeByteArray arr
+  pure (Bytes r 0 sz)

@@ -5,22 +5,28 @@
 {-# language ScopedTypeVariables #-}
 {-# language TypeApplications #-}
 
-import Data.Primitive (ByteArray)
-import Data.Word (Word8)
-import Data.Char (ord)
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
+import Data.Bytes.Chunks (Chunks(ChunksNil,ChunksCons))
 import Data.Bytes.Types (Bytes(Bytes))
+import Data.Char (ord)
+import Data.Primitive (ByteArray)
+import Data.Proxy (Proxy(..))
+import Data.Word (Word8)
 import Test.Tasty (defaultMain,testGroup,TestTree)
 import Test.Tasty.HUnit ((@=?),testCase)
 import Test.Tasty.QuickCheck ((===),testProperty,property,Discard(Discard))
-import Test.Tasty.QuickCheck ((==>))
+import Test.Tasty.QuickCheck ((==>),Arbitrary)
 
-import qualified Data.Bytes as Bytes
 import qualified Data.ByteString as ByteString
+import qualified Data.Bytes as Bytes
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Primitive as PM
 import qualified GHC.Exts as Exts
+import qualified Test.QuickCheck.Classes as QCC
 import qualified Test.Tasty.HUnit as THU
+import qualified Test.Tasty.QuickCheck as TQC
 
 main :: IO ()
 main = defaultMain tests
@@ -117,26 +123,31 @@ tests = testGroup "Bytes"
       [Bytes.fromAsciiString "hello", Bytes.fromAsciiString "world"]
       @=?
       (Bytes.splitInit 0x0A (Bytes.fromAsciiString "hello\nworld\nthere"))
-  , testProperty "splitOnce" $ \(x :: Word8) (xs :: [Word8]) ->
+  , testProperty "split1" $ \(x :: Word8) (xs :: [Word8]) ->
       case ByteString.split x (ByteString.pack xs) of
-        [] -> Bytes.splitOnce x (slicedPack xs) === Nothing
-        [_] -> Bytes.splitOnce x (slicedPack xs) === Nothing
-        [y1,z1] -> case Bytes.splitOnce x (slicedPack xs) of
+        [] -> Bytes.split1 x (slicedPack xs) === Nothing
+        [_] -> Bytes.split1 x (slicedPack xs) === Nothing
+        [y1,z1] -> case Bytes.split1 x (slicedPack xs) of
           Nothing -> property False
           Just (y2,z2) -> (y1,z1) === (bytesToByteString y2, bytesToByteString z2)
         _ -> property Discard
-  , testProperty "splitTwice" $ \(xs :: [Word8]) (ys :: [Word8]) (zs :: [Word8]) ->
+  , testProperty "split2" $ \(xs :: [Word8]) (ys :: [Word8]) (zs :: [Word8]) ->
       (all (/=0xEF) xs && all (/=0xEF) ys && all (/=0xEF) zs)
       ==>
-      case Bytes.splitTwice 0xEF (slicedPack (xs ++ [0xEF] ++ ys ++ [0xEF] ++ zs)) of
+      case Bytes.split2 0xEF (slicedPack (xs ++ [0xEF] ++ ys ++ [0xEF] ++ zs)) of
         Just r -> r === (slicedPack xs, slicedPack ys, slicedPack zs)
         Nothing -> property False
-  , testProperty "splitThrice" $ \(ws :: [Word8]) (xs :: [Word8]) (ys :: [Word8]) (zs :: [Word8])->
+  , testProperty "split3" $ \(ws :: [Word8]) (xs :: [Word8]) (ys :: [Word8]) (zs :: [Word8])->
       (all (/=0xEF) ws && all (/=0xEF) xs && all (/=0xEF) ys && all (/=0xEF) zs)
       ==>
-      case Bytes.splitThrice 0xEF (slicedPack (ws ++ [0xEF] ++ xs ++ [0xEF] ++ ys ++ [0xEF] ++ zs)) of
+      case Bytes.split3 0xEF (slicedPack (ws ++ [0xEF] ++ xs ++ [0xEF] ++ ys ++ [0xEF] ++ zs)) of
         Just r -> r === (slicedPack ws, slicedPack xs, slicedPack ys, slicedPack zs)
         Nothing -> property False
+  , testGroup "Chunks"
+    [ lawsToTest (QCC.eqLaws (Proxy :: Proxy Chunks))
+    , lawsToTest (QCC.semigroupLaws (Proxy :: Proxy Chunks))
+    , lawsToTest (QCC.monoidLaws (Proxy :: Proxy Chunks))
+    ]
   ]
 
 bytes :: String -> Bytes
@@ -155,3 +166,18 @@ c2w = fromIntegral . ord
 
 bytesToByteString :: Bytes -> ByteString.ByteString
 bytesToByteString = ByteString.pack . Bytes.foldr (:) []
+
+instance Arbitrary Chunks where
+  arbitrary = do
+    xs :: [[Word8]] <- TQC.arbitrary
+    let ys = map
+          (\x -> Exts.fromList ([255] ++ x ++ [255]))
+          xs
+        zs = foldr
+          (\b cs ->
+            ChunksCons (Bytes b 1 (PM.sizeofByteArray b - 2)) cs
+          ) ChunksNil ys
+    pure zs
+
+lawsToTest :: QCC.Laws -> TestTree
+lawsToTest (QCC.Laws name pairs) = testGroup name (map (uncurry TQC.testProperty) pairs)

@@ -6,13 +6,16 @@
   for zero-length byte sequences to mirror the behavior `bytestring`'s
   behavior. Now, `split` returns a singleton list with the empty byte
   sequence in this case.
-* Add `split1` so that users who need to take advantage of the non-null
-  guarantee split provides can do so.
+* Add `splitNonEmpty` so that users who need to take advantage of the
+  non-null guarantee `split` provides can do so.
 * Make the C code compile on platforms that do not have `rawmemchr`.
-* Rename `splitOnce` to `splitFirst`.
-* Add `splitTwice` and `splitThrice`.
+* Rename `splitOnce` to `split1`.
+* Add `split2` and `split3`.
 * Add `equalsLatin{1,2,3,4,5,6,7}`
 * Add `ifoldl'`.
+* Add `hGet`.
+* Move `Data.Bytes.Chunks` from `small-bytearray-builder` to `byteslice`.
+* Add `hGetContents` to `Data.Bytes.Chunks`.
 
 ## 0.1.4.0 -- 2019-11-12
 
