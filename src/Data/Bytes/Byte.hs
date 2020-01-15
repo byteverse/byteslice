@@ -13,7 +13,7 @@
 module Data.Bytes.Byte
   ( count
   , split
-  , split1
+  , splitNonEmpty
   , splitInit
   ) where
 
@@ -60,9 +60,9 @@ split !w !bs@Bytes{array,offset=arrIx0} = Exts.build
 
 -- | Variant of 'split' that returns the result as a 'NonEmpty'
 -- instead of @[]@. This is also eligible for stream fusion.
-split1 :: Word8 -> Bytes -> NonEmpty Bytes
-{-# inline split1 #-}
-split1 !w !bs@Bytes{array,offset=arrIx0} =
+splitNonEmpty :: Word8 -> Bytes -> NonEmpty Bytes
+{-# inline splitNonEmpty #-}
+splitNonEmpty !w !bs@Bytes{array,offset=arrIx0} =
   Bytes array arrIx0 len0 :| Exts.build
   (\g x0 ->
     let go !lenIx !arrIx = if lenIx < lensSz

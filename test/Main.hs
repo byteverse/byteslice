@@ -99,10 +99,10 @@ tests = testGroup "Bytes"
       ByteString.split x (ByteString.pack xs)
       ===
       map bytesToByteString (Bytes.split x (slicedPack xs))
-  , testProperty "split1" $ \(x :: Word8) (xs :: [Word8]) ->
+  , testProperty "splitNonEmpty" $ \(x :: Word8) (xs :: [Word8]) ->
       Bytes.split x (slicedPack xs)
       ===
-      Foldable.toList (Bytes.split1 x (slicedPack xs))
+      Foldable.toList (Bytes.splitNonEmpty x (slicedPack xs))
   , testProperty "splitInit" $ \(x :: Word8) (xs :: [Word8]) -> case xs of
       [] -> Bytes.splitInit x (slicedPack xs) === []
       _ -> 
