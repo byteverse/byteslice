@@ -8,6 +8,8 @@
   sequence in this case.
 * Add `splitNonEmpty` so that users who need to take advantage of the
   non-null guarantee `split` provides can do so.
+* Add `splitU` and `splitInitU` for users who are going to split a
+  byte sequence without and consume the results more than once.
 * Make the C code compile on platforms that do not have `rawmemchr`.
 * Rename `splitOnce` to `split1`.
 * Add `split2` and `split3`.
@@ -15,7 +17,10 @@
 * Add `ifoldl'`.
 * Add `hGet` and `hPut`.
 * Move `Data.Bytes.Chunks` from `small-bytearray-builder` to `byteslice`.
+* Rename `Data.Bytes.Chunks.concat` to `concatU` (the U means unsliced),
+  and add a new `concat` that returns `Bytes`.
 * Add `hGetContents` to `Data.Bytes.Chunks`.
+* Add `isBytePrefixOf` and `isByteSuffixOf`.
 
 ## 0.1.4.0 -- 2019-11-12
 
