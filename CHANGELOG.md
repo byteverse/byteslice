@@ -13,7 +13,7 @@
 * Add `split2` and `split3`.
 * Add `equalsLatin{1,2,3,4,5,6,7}`
 * Add `ifoldl'`.
-* Add `hGet`.
+* Add `hGet` and `hPut`.
 * Move `Data.Bytes.Chunks` from `small-bytearray-builder` to `byteslice`.
 * Add `hGetContents` to `Data.Bytes.Chunks`.
 

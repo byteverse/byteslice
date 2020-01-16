@@ -1,4 +1,5 @@
 {-# language BangPatterns #-}
+{-# language BlockArguments #-}
 {-# language MagicHash #-}
 {-# language NamedFieldPuns #-}
 {-# language TypeApplications #-}
@@ -68,12 +69,12 @@ module Data.Bytes
   , toLatinString
     -- * I\/O with Handles
   , hGet
+  , hPut
   ) where
 
 import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem)
 
 import Control.Monad.Primitive (PrimMonad,PrimState,primitive_,unsafeIOToPrim)
-import Control.Monad.ST (runST)
 import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
@@ -81,6 +82,7 @@ import Data.Primitive (ByteArray(ByteArray),MutableByteArray)
 import Foreign.Ptr (Ptr,plusPtr)
 import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
 import GHC.Exts (Word#,Int#)
+import GHC.IO (IO(IO))
 import GHC.Word (Word8(W8#))
 import System.IO (Handle)
 
@@ -456,11 +458,12 @@ copy dst dstIx (Bytes src srcIx len) =
 pin :: Bytes -> Bytes
 pin b@(Bytes arr _ len) = case PM.isByteArrayPinned arr of
   True -> b
-  False -> runST $ do
-    dst <- PM.newPinnedByteArray len
-    copy dst 0 b
-    r <- PM.unsafeFreezeByteArray dst
-    pure (Bytes r 0 len)
+  False -> Bytes
+    ( runByteArrayST do
+        dst <- PM.newPinnedByteArray len
+        copy dst 0 b
+        PM.unsafeFreezeByteArray dst
+    ) 0 len
 
 -- | Yields a pointer to the beginning of the byte sequence. It is only safe
 -- to call this on a 'Bytes' backed by a pinned @ByteArray@.
@@ -486,6 +489,14 @@ empty = Bytes mempty 0 0
 hGet :: Handle -> Int -> IO Bytes
 hGet h i = createPinnedAndTrim i (\p -> IO.hGetBuf h p i)
 
+-- | Outputs 'Bytes' to the specified 'Handle'. This is implemented
+-- with 'hPutBuf'.
+hPut :: Handle -> Bytes -> IO ()
+hPut h b0 = do
+  let b1@(Bytes arr _ len) = pin b0
+  IO.hPutBuf h (contents b1) len
+  touchByteArrayIO arr
+
 createPinnedAndTrim :: Int -> (Ptr Word8 -> IO Int) -> IO Bytes
 {-# inline createPinnedAndTrim #-}
 createPinnedAndTrim maxSz f = do
@@ -494,3 +505,7 @@ createPinnedAndTrim maxSz f = do
   PM.shrinkMutablePrimArray (PM.MutablePrimArray @Exts.RealWorld @Word8 arr#) sz
   r <- PM.unsafeFreezeByteArray arr
   pure (Bytes r 0 sz)
+
+touchByteArrayIO :: ByteArray -> IO ()
+touchByteArrayIO (ByteArray x) =
+  IO (\s -> (# Exts.touch# x s, () #))
