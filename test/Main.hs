@@ -20,6 +20,7 @@ import Test.Tasty.QuickCheck ((==>),Arbitrary)
 
 import qualified Data.ByteString as ByteString
 import qualified Data.Bytes as Bytes
+import qualified Data.Bytes.Chunks as Chunks
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
 import qualified Data.Primitive as PM
@@ -115,6 +116,12 @@ tests = testGroup "Bytes"
         List.init (ByteString.split x (ByteString.pack xs))
         ===
         map bytesToByteString (Bytes.splitInit x (slicedPack xs))
+  , testProperty "splitU" $ \(x :: Word8) (xs :: [Word8]) ->
+      not (List.null xs)
+      ==>
+      Bytes.split x (slicedPack xs)
+      ===
+      map Bytes.fromByteArray (Exts.toList (Bytes.splitU x (slicedPack xs)))
   , testCase "splitInit-A" $
       [Bytes.fromAsciiString "hello", Bytes.fromAsciiString "world"]
       @=?
@@ -147,6 +154,14 @@ tests = testGroup "Bytes"
     [ lawsToTest (QCC.eqLaws (Proxy :: Proxy Chunks))
     , lawsToTest (QCC.semigroupLaws (Proxy :: Proxy Chunks))
     , lawsToTest (QCC.monoidLaws (Proxy :: Proxy Chunks))
+    , testGroup "concatenation"
+      [ testProperty "concat=concatU" $ \(c :: Chunks) ->
+          Chunks.concat c === Bytes.fromByteArray (Chunks.concatU c)
+      , testProperty "concat-singleton" $ \(b :: Bytes) ->
+          Chunks.concat (ChunksCons b ChunksNil) === b
+      , testProperty "concatU-singleton" $ \(b :: Bytes) ->
+          Chunks.concatU (ChunksCons b ChunksNil) === Bytes.toByteArray b
+      ]
     ]
   ]
 
@@ -166,6 +181,16 @@ c2w = fromIntegral . ord
 
 bytesToByteString :: Bytes -> ByteString.ByteString
 bytesToByteString = ByteString.pack . Bytes.foldr (:) []
+
+instance Arbitrary Bytes where
+  arbitrary = do
+    xs :: [Word8] <- TQC.arbitrary
+    front <- TQC.choose (0,2)
+    back <- TQC.choose (0,2)
+    let frontPad = replicate front (254 :: Word8)
+    let backPad = replicate back (254 :: Word8)
+    let raw = Exts.fromList (frontPad ++ xs ++ backPad)
+    pure (Bytes raw front (length xs))
 
 instance Arbitrary Chunks where
   arbitrary = do

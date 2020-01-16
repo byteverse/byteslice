@@ -28,8 +28,9 @@ library
   build-depends:
     , base >=4.11.1 && <5
     , primitive >=0.7 && <0.8
+    , primitive-unlifted >=0.1.2 && <0.2
     , primitive-addr >=0.1 && <0.2
-    , run-st >=0.1 && <0.2
+    , run-st >=0.1.1 && <0.2
   hs-source-dirs: src
   ghc-options: -Wall -O2
   default-language: Haskell2010

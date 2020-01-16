@@ -19,6 +19,7 @@ module Data.Bytes.Chunks
   , length
     -- * Manipulate
   , concat
+  , concatU
   , reverse
   , reverseOnto
     -- * I\/O with Handles
@@ -27,7 +28,7 @@ module Data.Bytes.Chunks
 
 import Prelude hiding (length,concat,reverse)
 
-import Control.Monad.ST.Run (runByteArrayST)
+import Control.Monad.ST.Run (runIntByteArrayST)
 import Data.Bytes.Types (Bytes(Bytes))
 import Data.Primitive (ByteArray(..),MutableByteArray(..))
 import GHC.Exts (ByteArray#,MutableByteArray#)
@@ -40,6 +41,7 @@ import qualified Data.Primitive as PM
 import qualified Data.Bytes.Types as B
 import qualified Data.Bytes as Bytes
 
+-- | A cons-list of byte sequences.
 data Chunks
   = ChunksCons {-# UNPACK #-} !Bytes !Chunks
   | ChunksNil
@@ -54,28 +56,45 @@ instance Semigroup Chunks where
 instance Monoid Chunks where
   mempty = ChunksNil
 
+-- | This uses @concat@ to form an equivalence class.
 instance Eq Chunks where
   -- TODO: There is a more efficient way to do this, but
   -- it is tedious.
   a == b = concat a == concat b
 
-concat :: Chunks -> ByteArray
-concat x = ByteArray (concat# x)
+-- | Concatenate chunks into a single contiguous byte sequence.
+concat :: Chunks -> Bytes
+concat x = case x of
+  ChunksNil -> Bytes.empty
+  ChunksCons b y -> case y of
+    ChunksNil -> b
+    ChunksCons c z -> case concatFollowing2 b c z of
+      (# len, r #) -> Bytes (ByteArray r) 0 (I# len)
 
-concat# :: Chunks -> ByteArray#
-{-# noinline concat# #-}
-concat# ChunksNil = case mempty of {ByteArray x -> x}
-concat# (ChunksCons (Bytes{array=c,offset=coff,length=szc}) cs) = case cs of
-  ChunksNil -> case c of {ByteArray x -> x}
-  ChunksCons (Bytes{array=d,offset=doff,length=szd}) ds ->
-    unBa $ runByteArrayST $ do
-      let szboth = szc + szd
-          len = chunksLengthGo szboth ds
-      dst <- PM.newByteArray len
-      PM.copyByteArray dst 0 c coff szc
-      PM.copyByteArray dst szc d doff szd
-      _ <- copy dst szboth ds
-      PM.unsafeFreezeByteArray dst
+-- | Variant of 'concat' that returns an unsliced byte sequence.
+concatU :: Chunks -> ByteArray
+concatU x = case x of
+  ChunksNil -> mempty
+  ChunksCons b y -> case y of
+    ChunksNil -> Bytes.toByteArray b
+    ChunksCons c z -> case concatFollowing2 b c z of
+      (# _, r #) -> ByteArray r
+
+concatFollowing2 :: Bytes -> Bytes -> Chunks -> (# Int#, ByteArray# #)
+concatFollowing2
+  (Bytes{array=c,offset=coff,length=szc}) 
+  (Bytes{array=d,offset=doff,length=szd}) ds =
+    let !(I# x, ByteArray y) = runIntByteArrayST $ do
+          let !szboth = szc + szd
+              !len = chunksLengthGo szboth ds
+          dst <- PM.newByteArray len
+          PM.copyByteArray dst 0 c coff szc
+          PM.copyByteArray dst szc d doff szd
+          -- Note: len2 will always be the same as len.
+          !len2 <- copy dst szboth ds
+          result <- PM.unsafeFreezeByteArray dst
+          pure (len2,result)
+     in (# x, y #)
 
 length :: Chunks -> Int
 length = chunksLengthGo 0
@@ -104,7 +123,6 @@ copy# _ off ChunksNil s0 = (# s0, off #)
 copy# marr off (ChunksCons (Bytes{B.array,B.offset,B.length=len}) cs) s0 =
   case Exts.copyByteArray# (unBa array) (unI offset) marr off (unI len) s0 of
     s1 -> copy# marr (off +# unI len) cs s1
-
 
 -- | Reverse chunks but not the bytes within each chunk.
 reverse :: Chunks -> Chunks

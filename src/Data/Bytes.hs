@@ -29,20 +29,26 @@ module Data.Bytes
   , elem
     -- * Splitting
   , Byte.split
-  , Byte.splitNonEmpty
+  , Byte.splitU
   , Byte.splitInit
+  , Byte.splitInitU
+  , Byte.splitNonEmpty
   , split1
   , split2
   , split3
     -- * Counting
   , Byte.count
     -- * Prefix and Suffix
+    -- ** Byte Sequence
   , isPrefixOf
   , isSuffixOf
   , stripPrefix
   , stripOptionalPrefix
   , stripSuffix
   , stripOptionalSuffix
+    -- ** Single Byte
+  , isBytePrefixOf
+  , isByteSuffixOf
     -- * Equality
   , equalsLatin1
   , equalsLatin2
@@ -98,6 +104,22 @@ null (Bytes _ _ len) = len == 0
 -- | The length of a slice of bytes.
 length :: Bytes -> Int
 length (Bytes _ _ len) = len
+
+-- | Does the byte sequence begin with the given byte? False if the
+-- byte sequence is empty.
+isBytePrefixOf :: Word8 -> Bytes -> Bool
+isBytePrefixOf w b = case length b of
+  0 -> False
+  _ -> unsafeIndex b 0 == w
+
+-- | Does the byte sequence end with the given byte? False if the
+-- byte sequence is empty.
+isByteSuffixOf :: Word8 -> Bytes -> Bool
+isByteSuffixOf w b = case len of
+  0 -> False
+  _ -> unsafeIndex b (len - 1) == w
+  where
+  len = length b
 
 -- | Is the first argument a prefix of the second argument?
 isPrefixOf :: Bytes -> Bytes -> Bool
@@ -338,9 +360,8 @@ foldr' f a0 (Bytes arr off0 len0) =
 -- implies that all of the bytes are used. Otherwise, it makes a copy.
 toByteArray :: Bytes -> ByteArray
 toByteArray b@(Bytes arr off len)
-  | off /= 0 = toByteArrayClone b
-  | PM.sizeofByteArray arr /= len = toByteArrayClone b
-  | otherwise = arr
+  | off == 0, PM.sizeofByteArray arr == len = arr
+  | otherwise = toByteArrayClone b
 
 -- | Variant of 'toByteArray' that unconditionally makes a copy of
 -- the array backing the sliced 'Bytes' even if the original array
@@ -497,6 +518,7 @@ hPut h b0 = do
   IO.hPutBuf h (contents b1) len
   touchByteArrayIO arr
 
+-- Only used internally.
 createPinnedAndTrim :: Int -> (Ptr Word8 -> IO Int) -> IO Bytes
 {-# inline createPinnedAndTrim #-}
 createPinnedAndTrim maxSz f = do

@@ -13,27 +13,73 @@
 module Data.Bytes.Byte
   ( count
   , split
+  , splitU
   , splitNonEmpty
   , splitInit
+  , splitInitU
   ) where
 
 import Prelude hiding (length)
 
-import GHC.IO (unsafeIOToST)
+import Control.Monad.ST (runST)
+import Control.Monad.ST.Run (runPrimArrayST)
+import Data.Bytes.Types (Bytes(..))
+import Data.List.NonEmpty (NonEmpty((:|)))
 import Data.Primitive (PrimArray(..),MutablePrimArray(..),ByteArray(..))
+import Data.Primitive.Unlifted.Array (UnliftedArray)
 import Data.Word (Word8)
 import GHC.Exts (ByteArray#,MutableByteArray#)
-import Data.Bytes.Types (Bytes(..))
-import Control.Monad.ST.Run (runPrimArrayST)
-import Data.List.NonEmpty (NonEmpty((:|)))
+import GHC.IO (unsafeIOToST)
 
 import qualified Data.Primitive as PM
+import qualified Data.Primitive.Unlifted.Array as PM
 import qualified GHC.Exts as Exts
 
 -- | Count the number of times the byte appears in the sequence.
 count :: Word8 -> Bytes -> Int
 count !b (Bytes{array=ByteArray arr,offset,length}) =
   count_ba arr offset length b
+
+-- | Variant of 'split' that returns an array of unsliced byte sequences.
+-- Unlike 'split', this is not a good producer for list fusion. (It does
+-- not return a list, so it could not be.) Prefer 'split' if the result
+-- is going to be consumed exactly once by a good consumer. Prefer 'splitU'
+-- if the result of the split is going to be around for a while and
+-- inspected multiple times.
+splitU :: Word8 -> Bytes -> UnliftedArray ByteArray
+splitU !w !bs =
+  let !lens = splitLengthsAlt w bs
+      !lensSz = PM.sizeofPrimArray lens
+   in splitCommonU lens lensSz bs
+
+-- | Variant of 'splitU' that drops the trailing element. See 'splitInit'
+-- for an explanation of why this may be useful.
+splitInitU :: Word8 -> Bytes -> UnliftedArray ByteArray
+splitInitU !w !bs =
+  let !lens = splitLengthsAlt w bs
+      !lensSz = PM.sizeofPrimArray lens
+   in splitCommonU lens (lensSz - 1) bs
+
+-- Internal function
+splitCommonU ::
+     PrimArray Int -- array of segment lengths
+  -> Int -- number of lengths to consider
+  -> Bytes
+  -> UnliftedArray ByteArray
+splitCommonU !lens !lensSz Bytes{array,offset=arrIx0} = runST do
+  dst <- PM.unsafeNewUnliftedArray lensSz
+  let go !lenIx !arrIx = if lenIx < lensSz
+        then do
+          let !len = PM.indexPrimArray lens lenIx
+          buf <- PM.newByteArray len
+          PM.copyByteArray buf 0 array arrIx len
+          buf' <- PM.unsafeFreezeByteArray buf
+          PM.writeUnliftedArray dst lenIx buf'
+          go (lenIx + 1) (arrIx + len + 1)
+        else pure ()
+  go 0 arrIx0
+  PM.unsafeFreezeUnliftedArray dst
+  
 
 -- | Break a byte sequence into pieces separated by the byte argument,
 -- consuming the delimiter. This function is a good producer for list
@@ -77,7 +123,13 @@ splitNonEmpty !w !bs@Bytes{array,offset=arrIx0} =
   !len0 = PM.indexPrimArray lens 0 :: Int
 
 -- | Variant of 'split' that drops the trailing element. This behaves
--- correctly even if the byte sequence is empty.
+-- correctly even if the byte sequence is empty. This is a good producer
+-- for list fusion. This is useful when splitting a text file
+-- into lines.
+-- <https://pubs.opengroup.org/onlinepubs/009695399/basedefs/xbd_chap03.html#tag_03_392 POSIX>
+-- mandates that text files end with a newline, so the list resulting
+-- from 'split' always has an empty byte sequence as its last element.
+-- With 'splitInit', that unwanted element is discarded.
 splitInit :: Word8 -> Bytes -> [Bytes]
 {-# inline splitInit #-}
 splitInit !w !bs@Bytes{array,offset=arrIx0} = Exts.build
