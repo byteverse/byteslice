@@ -22,6 +22,7 @@
 * Add `hGetContents` to `Data.Bytes.Chunks`.
 * Add `isBytePrefixOf` and `isByteSuffixOf`.
 * Add `replicate` and `replicateU`.
+* Add `Monoid` instance for `Bytes`.
 
 ## 0.1.4.0 -- 2019-11-12
 

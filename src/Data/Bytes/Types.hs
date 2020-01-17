@@ -96,6 +96,9 @@ instance Semigroup Bytes where
     r <- PM.unsafeFreezeByteArray marr
     pure (Bytes r 0 (lenA + lenB))
 
+instance Monoid Bytes where
+  mempty = Bytes mempty 0 0
+
 compareByteArrays :: ByteArray -> Int -> ByteArray -> Int -> Int -> Ordering
 {-# INLINE compareByteArrays #-}
 compareByteArrays (ByteArray ba1#) (I# off1#) (ByteArray ba2#) (I# off2#) (I# n#) =
