@@ -13,6 +13,8 @@ module Data.Bytes
     -- * Properties
   , null
   , length
+    -- * Create
+  , replicate
     -- * Filtering
   , takeWhile
   , dropWhile
@@ -78,7 +80,7 @@ module Data.Bytes
   , hPut
   ) where
 
-import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem)
+import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicate)
 
 import Control.Monad.Primitive (PrimMonad,PrimState,primitive_,unsafeIOToPrim)
 import Control.Monad.ST.Run (runByteArrayST)
@@ -139,6 +141,20 @@ isSuffixOf (Bytes a aOff aLen) (Bytes b bOff bLen) =
   if aLen <= bLen
     then compareByteArrays a aOff b (bOff + bLen - aLen) aLen == EQ
     else False
+
+-- | Replicate a byte @n@ times.
+replicate ::
+     Int -- ^ Desired length @n@
+  -> Word8 -- ^ Byte to replicate
+  -> Bytes
+replicate !n !w = Bytes (replicateU n w) 0 n
+
+-- | Variant of 'replicate' that returns a unsliced byte array.
+replicateU :: Int -> Word8 -> ByteArray
+replicateU !n !w = runByteArrayST do
+  arr <- PM.newByteArray n
+  PM.setByteArray arr 0 n w
+  PM.unsafeFreezeByteArray arr
 
 -- | /O(n)/ Return the suffix of the second string if its prefix
 -- matches the entire first string.

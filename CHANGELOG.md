@@ -21,6 +21,7 @@
   and add a new `concat` that returns `Bytes`.
 * Add `hGetContents` to `Data.Bytes.Chunks`.
 * Add `isBytePrefixOf` and `isByteSuffixOf`.
+* Add `replicate` and `replicateU`.
 
 ## 0.1.4.0 -- 2019-11-12
 
