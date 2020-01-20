@@ -26,6 +26,9 @@
 * Add `Monoid` instance for `Bytes`.
 * Add `singleton`, `doubleton`, `tripleton`, and their unsliced variants.
 * Rename `copy` to `unsafeCopy`.
+* Add `fromLatinString`.
+* Change the behavior of `fromAsciiString` to replace out-of-bounds codepoints
+  with NUL.
 
 ## 0.1.4.0 -- 2019-11-12
 

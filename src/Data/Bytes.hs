@@ -82,6 +82,7 @@ module Data.Bytes
   , toByteArray
   , toByteArrayClone
   , fromAsciiString
+  , fromLatinString
   , fromByteArray
   , toLatinString
     -- * I\/O with Handles
@@ -435,10 +436,20 @@ toByteArrayClone (Bytes arr off len) = runByteArrayST $ do
   PM.copyByteArray m 0 arr off len
   PM.unsafeFreezeByteArray m
 
--- | Convert a 'String' consisting of only characters
---   in the ASCII block.
+-- | Convert a 'String' consisting of only characters in the ASCII block
+-- to a byte sequence. Any character with a codepoint above @U+007F@ is
+-- replaced by @U+0000@.
 fromAsciiString :: String -> Bytes
-fromAsciiString = fromByteArray . Exts.fromList . map (fromIntegral @Int @Word8 . ord)
+fromAsciiString = fromByteArray
+  . Exts.fromList
+  . map (\c -> let i = ord c in if i < 128 then fromIntegral @Int @Word8 i else 0)
+
+-- | Convert a 'String' consisting of only characters representable
+-- by ISO-8859-1. These are encoded with ISO-8859-1. Any character
+-- with a codepoint above @U+00FF@ is replace an unspecified byte.
+fromLatinString :: String -> Bytes
+fromLatinString =
+  fromByteArray . Exts.fromList . map (fromIntegral @Int @Word8 . ord)
 
 -- | Interpret a byte sequence as text encoded by ISO-8859-1.
 toLatinString :: Bytes -> String
