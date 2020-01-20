@@ -73,7 +73,7 @@ module Data.Bytes
   , unsafeDrop
   , unsafeIndex
     -- * Copying
-  , copy
+  , unsafeCopy
     -- * Pointers
   , pin
   , contents
@@ -295,6 +295,8 @@ elemIndexLoop# !w (Bytes arr off@(I# off# ) len) = case len of
     then off#
     else elemIndexLoop# w (Bytes arr (off + 1) (len - 1))
 
+
+-- | Is the byte a member of the byte sequence?
 elem :: Word8 -> Bytes -> Bool
 elem (W8# w) b = case elemLoop 0# w b of
   1# -> True
@@ -524,13 +526,13 @@ equalsLatin7 !c0 !c1 !c2 !c3 !c4 !c5 !c6 (Bytes arr off len) = case len of
 -- | Copy the byte sequence into a mutable buffer. The buffer must have
 -- enough space to accomodate the byte sequence, but this this is not
 -- checked.
-copy :: PrimMonad m
+unsafeCopy :: PrimMonad m
   => MutableByteArray (PrimState m) -- ^ Destination
   -> Int -- ^ Destination Offset
   -> Bytes -- ^ Source
   -> m ()
-{-# inline copy #-}
-copy dst dstIx (Bytes src srcIx len) =
+{-# inline unsafeCopy #-}
+unsafeCopy dst dstIx (Bytes src srcIx len) =
   PM.copyByteArray dst dstIx src srcIx len
 
 -- | Yields a pinned byte sequence whose contents are identical to those
@@ -543,7 +545,7 @@ pin b@(Bytes arr _ len) = case PM.isByteArrayPinned arr of
   False -> Bytes
     ( runByteArrayST do
         dst <- PM.newPinnedByteArray len
-        copy dst 0 b
+        unsafeCopy dst 0 b
         PM.unsafeFreezeByteArray dst
     ) 0 len
 

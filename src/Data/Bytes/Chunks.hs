@@ -25,6 +25,8 @@ module Data.Bytes.Chunks
     -- * Create
   , fromBytes
   , fromByteArray
+    -- * Copy to buffer
+  , unsafeCopy
     -- * I\/O with Handles
   , hGetContents
   ) where
@@ -94,11 +96,12 @@ concatFollowing2
           PM.copyByteArray dst 0 c coff szc
           PM.copyByteArray dst szc d doff szd
           -- Note: len2 will always be the same as len.
-          !len2 <- copy dst szboth ds
+          !len2 <- unsafeCopy dst szboth ds
           result <- PM.unsafeFreezeByteArray dst
           pure (len2,result)
      in (# x, y #)
 
+-- | The total number of bytes in all the chunks.
 length :: Chunks -> Int
 length = chunksLengthGo 0
 
@@ -110,13 +113,13 @@ chunksLengthGo !n (ChunksCons (Bytes{B.length=len}) cs) =
 -- | Copy the contents of the chunks into a mutable array.
 -- Precondition: The destination must have enough space to
 -- house the contents. This is not checked.
-copy ::
+unsafeCopy ::
      MutableByteArray s -- ^ Destination
   -> Int -- ^ Destination offset
   -> Chunks -- ^ Source
   -> ST s Int -- ^ Returns the next index into the destination after the payload
-{-# inline copy #-}
-copy (MutableByteArray dst) (I# off) cs = ST
+{-# inline unsafeCopy #-}
+unsafeCopy (MutableByteArray dst) (I# off) cs = ST
   (\s0 -> case copy# dst off cs s0 of
     (# s1, nextOff #) -> (# s1, I# nextOff #)
   )

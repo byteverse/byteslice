@@ -19,12 +19,13 @@
 * Move `Data.Bytes.Chunks` from `small-bytearray-builder` to `byteslice`.
 * Rename `Data.Bytes.Chunks.concat` to `concatU` (the U means unsliced),
   and add a new `concat` that returns `Bytes`.
-* Add `fromBytes` and `fromByteArray` to `Data.Bytes.Chunks`.
+* Add `fromBytes`, `fromByteArray`, and `unsafeCopy` to `Data.Bytes.Chunks`.
 * Add `hGetContents` to `Data.Bytes.Chunks`.
 * Add `isBytePrefixOf` and `isByteSuffixOf`.
 * Add `replicate` and `replicateU`.
 * Add `Monoid` instance for `Bytes`.
 * Add `singleton`, `doubleton`, `tripleton`, and their unsliced variants.
+* Rename `copy` to `unsafeCopy`.
 
 ## 0.1.4.0 -- 2019-11-12
 
