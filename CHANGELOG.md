@@ -29,6 +29,7 @@
 * Add `fromLatinString`.
 * Change the behavior of `fromAsciiString` to replace out-of-bounds codepoints
   with NUL.
+* Add `unsnoc` and `uncons`.
 
 ## 0.1.4.0 -- 2019-11-12
 

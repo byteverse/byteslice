@@ -13,6 +13,9 @@ module Data.Bytes
     -- * Properties
   , null
   , length
+    -- * Decompose
+  , uncons
+  , unsnoc
     -- * Create
     -- ** Sliced
   , singleton
@@ -116,6 +119,21 @@ null (Bytes _ _ len) = len == 0
 -- | The length of a slice of bytes.
 length :: Bytes -> Int
 length (Bytes _ _ len) = len
+
+-- | Extract the head and tail of the 'Bytes', returning 'Nothing' if
+-- it is empty.
+uncons :: Bytes -> Maybe (Word8, Bytes)
+uncons b = case length b of
+  0 -> Nothing
+  _ -> Just (unsafeIndex b 0, unsafeDrop 1 b)
+
+-- | Extract the @init@ and @last@ of the 'Bytes', returning 'Nothing' if
+-- it is empty.
+unsnoc :: Bytes -> Maybe (Bytes, Word8)
+unsnoc b@(Bytes arr off len) = case len of
+  0 -> Nothing
+  _ -> let !len' = len - 1 in
+    Just (Bytes arr off len', unsafeIndex b len')
 
 -- | Does the byte sequence begin with the given byte? False if the
 -- byte sequence is empty.
