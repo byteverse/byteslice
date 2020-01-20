@@ -14,7 +14,16 @@ module Data.Bytes
   , null
   , length
     -- * Create
+    -- ** Sliced
+  , singleton
+  , doubleton
+  , tripleton
   , replicate
+    -- ** Unsliced
+  , singletonU
+  , doubletonU
+  , tripletonU
+  , replicateU
     -- * Filtering
   , takeWhile
   , dropWhile
@@ -141,6 +150,42 @@ isSuffixOf (Bytes a aOff aLen) (Bytes b bOff bLen) =
   if aLen <= bLen
     then compareByteArrays a aOff b (bOff + bLen - aLen) aLen == EQ
     else False
+
+-- | Create a byte sequence with one byte.
+singleton :: Word8 -> Bytes
+singleton !a = Bytes (singletonU a) 0 1
+
+-- | Create a byte sequence with two bytes.
+doubleton :: Word8 -> Word8 -> Bytes
+doubleton !a !b = Bytes (doubletonU a b) 0 2
+
+-- | Create a byte sequence with three bytes.
+tripleton :: Word8 -> Word8 -> Word8 -> Bytes
+tripleton !a !b !c = Bytes (tripletonU a b c) 0 3
+
+-- | Create an unsliced byte sequence with one byte.
+singletonU :: Word8 -> ByteArray
+singletonU !a = runByteArrayST do
+  arr <- PM.newByteArray 1
+  PM.writeByteArray arr 0 a
+  PM.unsafeFreezeByteArray arr
+
+-- | Create an unsliced byte sequence with two bytes.
+doubletonU :: Word8 -> Word8 -> ByteArray
+doubletonU !a !b = runByteArrayST do
+  arr <- PM.newByteArray 2
+  PM.writeByteArray arr 0 a
+  PM.writeByteArray arr 1 b
+  PM.unsafeFreezeByteArray arr
+
+-- | Create an unsliced byte sequence with three bytes.
+tripletonU :: Word8 -> Word8 -> Word8 -> ByteArray
+tripletonU !a !b !c = runByteArrayST do
+  arr <- PM.newByteArray 3
+  PM.writeByteArray arr 0 a
+  PM.writeByteArray arr 1 b
+  PM.writeByteArray arr 2 c
+  PM.unsafeFreezeByteArray arr
 
 -- | Replicate a byte @n@ times.
 replicate ::

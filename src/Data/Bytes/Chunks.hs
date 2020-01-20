@@ -22,6 +22,9 @@ module Data.Bytes.Chunks
   , concatU
   , reverse
   , reverseOnto
+    -- * Create
+  , fromBytes
+  , fromByteArray
     -- * I\/O with Handles
   , hGetContents
   ) where
@@ -157,3 +160,11 @@ hGetContents !h = do
 
 chunkSize :: Int
 chunkSize = 16384 - 16
+
+-- | Create a list of chunks with a single chunk.
+fromBytes :: Bytes -> Chunks
+fromBytes !b = ChunksCons b ChunksNil
+
+-- | Variant of 'fromBytes' where the single chunk is unsliced.
+fromByteArray :: ByteArray -> Chunks
+fromByteArray !b = fromBytes (Bytes.fromByteArray b)
