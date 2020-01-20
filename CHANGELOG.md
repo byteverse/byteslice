@@ -1,6 +1,6 @@
 # Revision history for byteslice
 
-## 0.2.0.0 -- ????-??-??
+## 0.2.0.0 -- 2020-01-20
 
 * Change behavior of `split`. This function previously had a special case
   for zero-length byte sequences to mirror the behavior `bytestring`'s
