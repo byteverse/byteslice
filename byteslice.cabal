@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name: byteslice
-version: 0.2.0.0
+version: 0.2.1.0
 synopsis: Slicing managed and unmanaged memory
 description:
   This library provides types that allow the user to talk about a slice of

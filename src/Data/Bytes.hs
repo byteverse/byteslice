@@ -60,6 +60,7 @@ module Data.Bytes
   , stripOptionalPrefix
   , stripSuffix
   , stripOptionalSuffix
+  , longestCommonPrefix
     -- ** Single Byte
   , isBytePrefixOf
   , isByteSuffixOf
@@ -169,6 +170,18 @@ isSuffixOf (Bytes a aOff aLen) (Bytes b bOff bLen) =
   if aLen <= bLen
     then compareByteArrays a aOff b (bOff + bLen - aLen) aLen == EQ
     else False
+
+-- | Find the longest string which is a prefix of both arguments.
+longestCommonPrefix :: Bytes -> Bytes -> Bytes
+longestCommonPrefix a b = loop 0
+  where
+  loop :: Int -> Bytes
+  loop !into
+    | into < maxLen
+      && unsafeIndex a into == unsafeIndex b into
+      = loop (into + 1)
+    | otherwise = unsafeTake into a
+  maxLen = min (length a) (length b)
 
 -- | Create a byte sequence with one byte.
 singleton :: Word8 -> Bytes
