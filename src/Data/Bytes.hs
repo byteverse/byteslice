@@ -60,7 +60,7 @@ module Data.Bytes
   , stripOptionalPrefix
   , stripSuffix
   , stripOptionalSuffix
-  , sharedPrefix
+  , longestCommonPrefix
     -- ** Single Byte
   , isBytePrefixOf
   , isByteSuffixOf
@@ -172,8 +172,8 @@ isSuffixOf (Bytes a aOff aLen) (Bytes b bOff bLen) =
     else False
 
 -- | Find the longest string which is a prefix of both arguments.
-sharedPrefix :: Bytes -> Bytes -> Bytes
-sharedPrefix a b = loop 0
+longestCommonPrefix :: Bytes -> Bytes -> Bytes
+longestCommonPrefix a b = loop 0
   where
   loop :: Int -> Bytes
   loop !into

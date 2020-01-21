@@ -1,5 +1,9 @@
 # Revision history for byteslice
 
+## 0.2.1.0 -- 2020-??-??
+
+* Add `longestCommonPrefix`.
+
 ## 0.2.0.0 -- 2020-01-20
 
 * Change behavior of `split`. This function previously had a special case
