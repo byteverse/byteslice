@@ -56,6 +56,16 @@ tests = testGroup "Bytes"
         @=?
         Bytes.stripOptionalSuffix (bytes "h") (bytes "hey man")
     ]
+  , testGroup "sharedPrefix"
+    [ testProperty "finds prefix" $ \(pre :: Bytes) (a :: Bytes) (b :: Bytes) ->
+        if | Just (wa,_) <- Bytes.uncons a, Just (wb,_) <- Bytes.uncons b, wa /= wb ->
+               Bytes.sharedPrefix (pre <> a) (pre <> b) === pre
+           | otherwise -> property Discard
+    , testProperty "finds no prefix" $ \(a :: Bytes) (b :: Bytes) ->
+        if | Just (wa,_) <- Bytes.uncons a, Just (wb,_) <- Bytes.uncons b, wa /= wb ->
+               Bytes.sharedPrefix a b === mempty
+           | otherwise -> property Discard
+    ]
   , testGroup "dropWhileEnd"
     [ testCase "A" $
         Bytes.fromAsciiString "aabbcc"
