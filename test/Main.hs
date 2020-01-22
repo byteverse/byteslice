@@ -34,7 +34,11 @@ main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "Bytes"
-  [ testGroup "isPrefixOf"
+  [ lawsToTest (QCC.eqLaws (Proxy :: Proxy Bytes))
+  , lawsToTest (QCC.ordLaws (Proxy :: Proxy Bytes))
+  , lawsToTest (QCC.semigroupLaws (Proxy :: Proxy Bytes))
+  , lawsToTest (QCC.monoidLaws (Proxy :: Proxy Bytes))
+  , testGroup "isPrefixOf"
     [ testCase "A" $ THU.assertBool "" $
         Bytes.isPrefixOf (bytes "hey") (bytes "hey man")
     , testCase "B" $ THU.assertBool "" $

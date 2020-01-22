@@ -84,7 +84,7 @@ instance Eq Bytes where
 instance Ord Bytes where
   compare (Bytes arr1 off1 len1) (Bytes arr2 off2 len2)
     | sameByteArray arr1 arr2 && off1 == off2 && len1 == len2 = EQ
-    | otherwise = compareByteArrays arr1 off1 arr2 off2 len1
+    | otherwise = compareByteArrays arr1 off1 arr2 off2 (min len1 len2) <> compare len1 len2
 
 instance Semigroup Bytes where
   -- TODO: Do the trick to move the data constructor to the outside
