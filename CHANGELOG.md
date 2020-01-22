@@ -1,8 +1,9 @@
 # Revision history for byteslice
 
-## 0.2.1.0 -- 2020-??-??
+## 0.2.1.0 -- 2020-01-22
 
 * Add `longestCommonPrefix`.
+* Fix broken `Ord` instance of `Bytes`.
 
 ## 0.2.0.0 -- 2020-01-20
 
