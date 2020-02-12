@@ -1,5 +1,9 @@
 # Revision history for byteslice
 
+## 0.2.2.0 -- 2020-??-??
+
+* Add `split4`.
+
 ## 0.2.1.0 -- 2020-01-22
 
 * Add `longestCommonPrefix`.

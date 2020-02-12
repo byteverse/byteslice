@@ -164,6 +164,12 @@ tests = testGroup "Bytes"
       case Bytes.split3 0xEF (slicedPack (ws ++ [0xEF] ++ xs ++ [0xEF] ++ ys ++ [0xEF] ++ zs)) of
         Just r -> r === (slicedPack ws, slicedPack xs, slicedPack ys, slicedPack zs)
         Nothing -> property False
+  , testProperty "split4" $ \(ws :: [Word8]) (xs :: [Word8]) (ys :: [Word8]) (zs :: [Word8]) (ps :: [Word8]) ->
+      (all (/=0xEF) ws && all (/=0xEF) xs && all (/=0xEF) ys && all (/=0xEF) zs && all (/=0xEF) ps)
+      ==>
+      case Bytes.split4 0xEF (slicedPack (ws ++ [0xEF] ++ xs ++ [0xEF] ++ ys ++ [0xEF] ++ zs ++ [0xEF] ++ ps)) of
+        Just r -> r === (slicedPack ws, slicedPack xs, slicedPack ys, slicedPack zs, slicedPack ps)
+        Nothing -> property False
   , testGroup "Chunks"
     [ lawsToTest (QCC.eqLaws (Proxy :: Proxy Chunks))
     , lawsToTest (QCC.semigroupLaws (Proxy :: Proxy Chunks))
