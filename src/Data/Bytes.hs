@@ -76,6 +76,7 @@ module Data.Bytes
   , equalsLatin5
   , equalsLatin6
   , equalsLatin7
+  , equalsLatin8
     -- ** C Strings
   , equalsCString
     -- * Unsafe Slicing
@@ -598,6 +599,20 @@ equalsLatin7 !c0 !c1 !c2 !c3 !c4 !c5 !c6 (Bytes arr off len) = case len of
        c4 == indexCharArray arr (off + 4) &&
        c5 == indexCharArray arr (off + 5) &&
        c6 == indexCharArray arr (off + 6)
+  _ -> False
+
+-- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
+-- an octupleton whose elements match the characters?
+equalsLatin8 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
+equalsLatin8 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 (Bytes arr off len) = case len of
+  8 -> c0 == indexCharArray arr off &&
+       c1 == indexCharArray arr (off + 1) &&
+       c2 == indexCharArray arr (off + 2) &&
+       c3 == indexCharArray arr (off + 3) &&
+       c4 == indexCharArray arr (off + 4) &&
+       c5 == indexCharArray arr (off + 5) &&
+       c6 == indexCharArray arr (off + 6) &&
+       c7 == indexCharArray arr (off + 7)
   _ -> False
 
 -- | Is the byte sequence equal to the @NUL@-terminated C String?
