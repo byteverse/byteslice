@@ -66,6 +66,7 @@ module Data.Bytes
   , isBytePrefixOf
   , isByteSuffixOf
     -- * Equality
+    -- ** Fixed Characters
   , equalsLatin1
   , equalsLatin2
   , equalsLatin3
@@ -73,6 +74,8 @@ module Data.Bytes
   , equalsLatin5
   , equalsLatin6
   , equalsLatin7
+    -- ** C Strings
+  , equalsCString
     -- * Unsafe Slicing
   , unsafeTake
   , unsafeDrop
@@ -102,7 +105,8 @@ import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
 import Data.Primitive (ByteArray(ByteArray),MutableByteArray)
-import Foreign.Ptr (Ptr,plusPtr)
+import Foreign.C.Types (CChar)
+import Foreign.Ptr (Ptr,plusPtr,castPtr)
 import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
 import GHC.Exts (Word#,Int#)
 import GHC.IO (IO(IO))
@@ -111,6 +115,7 @@ import System.IO (Handle)
 
 import qualified Data.Bytes.Byte as Byte
 import qualified Data.Primitive as PM
+import qualified Data.Primitive.Ptr as PM
 import qualified GHC.Exts as Exts
 import qualified System.IO as IO
 
@@ -592,6 +597,17 @@ equalsLatin7 !c0 !c1 !c2 !c3 !c4 !c5 !c6 (Bytes arr off len) = case len of
        c5 == indexCharArray arr (off + 5) &&
        c6 == indexCharArray arr (off + 6)
   _ -> False
+
+-- | Is the byte sequence equal to the @NUL@-terminated C String?
+-- The C string must be a constant.
+equalsCString :: Ptr CChar -> Bytes -> Bool
+{-# inline equalsCString #-}
+equalsCString !ptr0 (Bytes arr off0 len0) = go (castPtr ptr0 :: Ptr Word8) off0 len0 where
+  go !ptr !off !len = case len of
+    0 -> True
+    _ -> case PM.indexOffPtr ptr 0 of
+      0 -> False
+      c -> c == PM.indexByteArray arr off && go (plusPtr ptr 1) (off + 1) (len - 1)
 
 -- | Copy the byte sequence into a mutable buffer. The buffer must have
 -- enough space to accomodate the byte sequence, but this this is not
