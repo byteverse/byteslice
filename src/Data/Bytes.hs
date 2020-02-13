@@ -62,6 +62,8 @@ module Data.Bytes
   , stripSuffix
   , stripOptionalSuffix
   , longestCommonPrefix
+    -- ** C Strings
+  , stripCStringPrefix
     -- ** Single Byte
   , isBytePrefixOf
   , isByteSuffixOf
@@ -105,7 +107,7 @@ import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
 import Data.Primitive (ByteArray(ByteArray),MutableByteArray)
-import Foreign.C.Types (CChar)
+import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr,plusPtr,castPtr)
 import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
 import GHC.Exts (Word#,Int#)
@@ -600,14 +602,27 @@ equalsLatin7 !c0 !c1 !c2 !c3 !c4 !c5 !c6 (Bytes arr off len) = case len of
 
 -- | Is the byte sequence equal to the @NUL@-terminated C String?
 -- The C string must be a constant.
-equalsCString :: Ptr CChar -> Bytes -> Bool
+equalsCString :: CString -> Bytes -> Bool
 {-# inline equalsCString #-}
 equalsCString !ptr0 (Bytes arr off0 len0) = go (castPtr ptr0 :: Ptr Word8) off0 len0 where
   go !ptr !off !len = case len of
-    0 -> True
+    0 -> PM.indexOffPtr ptr 0 == (0 :: Word8)
     _ -> case PM.indexOffPtr ptr 0 of
       0 -> False
       c -> c == PM.indexByteArray arr off && go (plusPtr ptr 1) (off + 1) (len - 1)
+
+-- | /O(n)/ Variant of 'stripPrefix' that takes a @NUL@-terminated C String
+-- as the prefix to test for.
+stripCStringPrefix :: CString -> Bytes -> Maybe Bytes
+{-# inline stripCStringPrefix #-}
+stripCStringPrefix !ptr0 (Bytes arr off0 len0) = go (castPtr ptr0 :: Ptr Word8) off0 len0 where
+  go !ptr !off !len = case PM.indexOffPtr ptr 0 of
+    0 -> Just (Bytes arr off len)
+    c -> case len of
+      0 -> Nothing
+      _ -> case c == PM.indexByteArray arr off of
+        True -> go (plusPtr ptr 1) (off + 1) (len - 1)
+        False -> Nothing
 
 -- | Copy the byte sequence into a mutable buffer. The buffer must have
 -- enough space to accomodate the byte sequence, but this this is not

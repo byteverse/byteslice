@@ -4,6 +4,7 @@
 
 * Add `split4`.
 * Add `equalsCString`.
+* Add `stripCStringPrefix`.
 
 ## 0.2.1.0 -- 2020-01-22
 
