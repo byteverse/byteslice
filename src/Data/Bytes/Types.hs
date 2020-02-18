@@ -10,16 +10,18 @@ module Data.Bytes.Types
   ) where
 
 import Control.Monad.ST (runST)
-import Data.Primitive (ByteArray(..),MutableByteArray(..))
-import Data.Primitive.Addr (Addr)
+import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bits ((.&.),unsafeShiftR)
 import Data.Char (ord)
+import Data.Primitive (ByteArray(..),MutableByteArray(..))
+import Data.Primitive.Addr (Addr)
 import Data.Word (Word8)
 import GHC.Base (unsafeChr)
 import GHC.Exts (Int(I#),unsafeCoerce#,sameMutableByteArray#)
 import GHC.Exts (isTrue#,compareByteArrays#,IsList(..))
 
 import qualified Data.List as L
+import qualified Data.Foldable as F
 import qualified Data.Primitive as PM
 
 -- | A slice of a 'ByteArray'.
@@ -98,6 +100,19 @@ instance Semigroup Bytes where
 
 instance Monoid Bytes where
   mempty = Bytes mempty 0 0
+  mconcat [] = mempty
+  mconcat [x] = x
+  mconcat bs = Bytes r 0 fullLen
+    where
+    !fullLen = L.foldl' (\acc (Bytes _ _ len) -> acc + len) 0 bs
+    r = runByteArrayST $ do
+      marr <- PM.newByteArray fullLen
+      !_ <- F.foldlM
+        (\ !currLen (Bytes arr off len) -> do
+          PM.copyByteArray marr currLen arr off len
+          pure (currLen + len)
+        ) 0 bs
+      PM.unsafeFreezeByteArray marr
 
 compareByteArrays :: ByteArray -> Int -> ByteArray -> Int -> Int -> Ordering
 {-# INLINE compareByteArrays #-}

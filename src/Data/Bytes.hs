@@ -51,6 +51,8 @@ module Data.Bytes
   , split2
   , split3
   , split4
+    -- * Combining
+  , intercalate
     -- * Counting
   , Byte.count
     -- * Prefix and Suffix
@@ -117,6 +119,7 @@ import GHC.Word (Word8(W8#))
 import System.IO (Handle)
 
 import qualified Data.Bytes.Byte as Byte
+import qualified Data.List as List
 import qualified Data.Primitive as PM
 import qualified Data.Primitive.Ptr as PM
 import qualified GHC.Exts as Exts
@@ -715,3 +718,8 @@ touchByteArrayIO (ByteArray x) =
 touchMutableByteArrayIO :: MutableByteArray s -> IO ()
 touchMutableByteArrayIO (PM.MutableByteArray x) =
   IO (\s -> (# Exts.touch# x s, () #))
+
+-- | /O(n)/ The intercalate function takes Bytes and a list of Bytes and concatenates the list after interspersing the first argument between each element of the list.
+intercalate :: Bytes -> [Bytes] -> Bytes
+intercalate s = mconcat . List.intersperse s
+
