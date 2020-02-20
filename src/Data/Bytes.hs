@@ -720,21 +720,26 @@ touchMutableByteArrayIO :: MutableByteArray s -> IO ()
 touchMutableByteArrayIO (PM.MutableByteArray x) =
   IO (\s -> (# Exts.touch# x s, () #))
 
--- | /O(n)/ The intercalate function takes Bytes and a list of Bytes and concatenates the list after interspersing the first argument between each element of the list.
-intercalate :: Bytes -> [Bytes] -> Bytes
-intercalate _ [] = mempty
-intercalate _ [x] = x
-intercalate (Bytes sarr soff slen) (Bytes barr boff blen : bs) = Bytes r 0 fullLen
+-- | /O(n)/ The intercalate function takes a separator 'Bytes' and a list of
+-- 'Bytes' and concatenates the list elements by interspersing the separator
+-- between each element.
+intercalate ::
+     Bytes -- ^ Separator (interspersed into the list)
+  -> [Bytes] -- ^ List
+  -> Bytes
+intercalate !_ [] = mempty
+intercalate !_ [x] = x
+intercalate (Bytes sarr soff slen) (Bytes arr0 off0 len0 : bs) = Bytes r 0 fullLen
   where
-  !fullLen = List.foldl' (\acc (Bytes _ _ len) -> acc + len + slen) 0 bs + blen
+  !fullLen = List.foldl' (\acc (Bytes _ _ len) -> acc + len + slen) 0 bs + len0
   r = runByteArrayST $ do
     marr <- PM.newByteArray fullLen
-    PM.copyByteArray marr 0 barr boff blen
+    PM.copyByteArray marr 0 arr0 off0 len0
     !_ <- F.foldlM
       (\ !currLen (Bytes arr off len) -> do
         PM.copyByteArray marr currLen sarr soff slen
         PM.copyByteArray marr (currLen + slen) arr off len
         pure (currLen + len + slen)
-      ) blen bs
+      ) len0 bs
     PM.unsafeFreezeByteArray marr
 
