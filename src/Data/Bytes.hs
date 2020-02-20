@@ -119,6 +119,7 @@ import GHC.Word (Word8(W8#))
 import System.IO (Handle)
 
 import qualified Data.Bytes.Byte as Byte
+import qualified Data.Foldable as F
 import qualified Data.List as List
 import qualified Data.Primitive as PM
 import qualified Data.Primitive.Ptr as PM
@@ -721,5 +722,19 @@ touchMutableByteArrayIO (PM.MutableByteArray x) =
 
 -- | /O(n)/ The intercalate function takes Bytes and a list of Bytes and concatenates the list after interspersing the first argument between each element of the list.
 intercalate :: Bytes -> [Bytes] -> Bytes
-intercalate s = mconcat . List.intersperse s
+intercalate _ [] = mempty
+intercalate _ [x] = x
+intercalate (Bytes sarr soff slen) (Bytes barr boff blen : bs) = Bytes r 0 fullLen
+  where
+  !fullLen = List.foldl' (\acc (Bytes _ _ len) -> acc + len + slen) 0 bs + blen
+  r = runByteArrayST $ do
+    marr <- PM.newByteArray fullLen
+    PM.copyByteArray marr 0 barr boff blen
+    !_ <- F.foldlM
+      (\ !currLen (Bytes arr off len) -> do
+        PM.copyByteArray marr currLen sarr soff slen
+        PM.copyByteArray marr (currLen + slen) arr off len
+        pure (currLen + len + slen)
+      ) blen bs
+    PM.unsafeFreezeByteArray marr
 
