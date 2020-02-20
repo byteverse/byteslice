@@ -120,6 +120,10 @@ tests = testGroup "Bytes"
       ByteString.split x (ByteString.pack xs)
       ===
       map bytesToByteString (Bytes.split x (slicedPack xs))
+  , testProperty "intercalate" $ \(x :: Bytes) (xs :: [Bytes]) ->
+      mconcat (List.intersperse x xs)
+      ===
+      Bytes.intercalate x xs
   , testProperty "splitNonEmpty" $ \(x :: Word8) (xs :: [Word8]) ->
       Bytes.split x (slicedPack xs)
       ===
