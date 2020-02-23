@@ -10,6 +10,7 @@ module Data.Bytes
     Bytes
     -- * Constants
   , empty
+  , emptyPinned
     -- * Properties
   , null
   , length
@@ -687,6 +688,13 @@ indexCharArray (ByteArray arr) (I# off) = C# (Exts.indexCharArray# arr off)
 -- | The empty byte sequence.
 empty :: Bytes
 empty = Bytes mempty 0 0
+
+-- | The empty byte sequence.
+emptyPinned :: Bytes
+emptyPinned = Bytes
+  ( runByteArrayST
+    (PM.newPinnedByteArray 0 >>= PM.unsafeFreezeByteArray)
+  ) 0 0
 
 -- | Read 'Bytes' directly from the specified 'Handle'. The resulting
 -- 'Bytes' are pinned. This is implemented with 'hGetBuf'.

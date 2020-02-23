@@ -1,4 +1,0 @@
-packages: .
-
-package byteslice
-  ghc-options: -Wall -Werror

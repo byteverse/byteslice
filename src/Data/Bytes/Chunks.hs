@@ -5,6 +5,7 @@
 {-# language MagicHash #-}
 {-# language UnboxedTuples #-}
 {-# language NamedFieldPuns #-}
+{-# language RankNTypes #-}
 
 -- | Chunks of bytes. This is useful as a target for a builder
 -- or as a way to read a large amount of whose size is unknown
@@ -19,6 +20,7 @@ module Data.Bytes.Chunks
   , length
     -- * Manipulate
   , concat
+  , concatPinned
   , concatU
   , reverse
   , reverseOnto
@@ -67,6 +69,16 @@ instance Eq Chunks where
   -- it is tedious.
   a == b = concat a == concat b
 
+-- | Variant of 'concat' that ensure that the resulting byte
+-- sequence is pinned memory.
+concatPinned :: Chunks -> Bytes
+concatPinned x = case x of
+  ChunksNil -> Bytes.emptyPinned
+  ChunksCons b y -> case y of
+    ChunksNil -> Bytes.pin b
+    ChunksCons c z -> case concatPinnedFollowing2 b c z of
+      (# len, r #) -> Bytes (ByteArray r) 0 (I# len)
+
 -- | Concatenate chunks into a single contiguous byte sequence.
 concat :: Chunks -> Bytes
 concat x = case x of
@@ -86,13 +98,25 @@ concatU x = case x of
       (# _, r #) -> ByteArray r
 
 concatFollowing2 :: Bytes -> Bytes -> Chunks -> (# Int#, ByteArray# #)
-concatFollowing2
+concatFollowing2 = internalConcatFollowing2 PM.newByteArray
+
+concatPinnedFollowing2 :: Bytes -> Bytes -> Chunks -> (# Int#, ByteArray# #)
+concatPinnedFollowing2 = internalConcatFollowing2 PM.newPinnedByteArray
+
+internalConcatFollowing2 ::
+     (forall s. Int -> ST s (MutableByteArray s))
+  -> Bytes
+  -> Bytes
+  -> Chunks
+  -> (# Int#, ByteArray# #)
+{-# inline internalConcatFollowing2 #-}
+internalConcatFollowing2 allocate
   (Bytes{array=c,offset=coff,length=szc}) 
   (Bytes{array=d,offset=doff,length=szd}) ds =
     let !(I# x, ByteArray y) = runIntByteArrayST $ do
           let !szboth = szc + szd
               !len = chunksLengthGo szboth ds
-          dst <- PM.newByteArray len
+          dst <- allocate len
           PM.copyByteArray dst 0 c coff szc
           PM.copyByteArray dst szc d doff szd
           -- Note: len2 will always be the same as len.
