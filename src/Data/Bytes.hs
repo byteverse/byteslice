@@ -17,6 +17,9 @@ module Data.Bytes
     -- * Decompose
   , uncons
   , unsnoc
+    -- * Predicates
+  , any
+  , all
     -- * Create
     -- ** Sliced
   , singleton
@@ -104,7 +107,7 @@ module Data.Bytes
   , hPut
   ) where
 
-import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicate)
+import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicate,any,all)
 
 import Control.Monad.Primitive (PrimMonad,PrimState,primitive_,unsafeIOToPrim)
 import Control.Monad.ST.Run (runByteArrayST)
@@ -751,3 +754,12 @@ intercalate (Bytes sarr soff slen) (Bytes arr0 off0 len0 : bs) = Bytes r 0 fullL
       ) len0 bs
     PM.unsafeFreezeByteArray marr
 
+-- | /O(n)/ Returns true if any byte in the sequence satisfies the predicate.
+any :: (Word8 -> Bool) -> Bytes -> Bool
+{-# inline any #-}
+any f = foldr (\b r -> f b || r) False
+
+-- | /O(n)/ Returns true if all bytes in the sequence satisfy the predicate.
+all :: (Word8 -> Bool) -> Bytes -> Bool
+{-# inline all #-}
+all f = foldr (\b r -> f b && r) True

@@ -8,6 +8,7 @@
 * Add `equalsLatin8`.
 * Add `emptyPinned`.
 * Add `concatPinned` to `Data.Bytes.Chunks`.
+* Add `any` and `all`.
 
 ## 0.2.1.0 -- 2020-01-22
 
