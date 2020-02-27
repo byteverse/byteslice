@@ -1,6 +1,6 @@
 # Revision history for byteslice
 
-## 0.2.2.0 -- 2020-??-??
+## 0.2.2.0 -- 2020-02-27
 
 * Add `split4`.
 * Add `equalsCString`.
