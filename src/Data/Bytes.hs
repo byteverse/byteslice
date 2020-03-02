@@ -85,6 +85,9 @@ module Data.Bytes
   , equalsLatin8
     -- ** C Strings
   , equalsCString
+    -- * Hashing
+  , fnv1a32
+  , fnv1a64
     -- * Unsafe Slicing
   , unsafeTake
   , unsafeDrop
@@ -111,6 +114,7 @@ import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicat
 
 import Control.Monad.Primitive (PrimMonad,PrimState,primitive_,unsafeIOToPrim)
 import Control.Monad.ST.Run (runByteArrayST)
+import Data.Bits (xor)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
 import Data.Primitive (ByteArray(ByteArray),MutableByteArray)
@@ -119,7 +123,7 @@ import Foreign.Ptr (Ptr,plusPtr,castPtr)
 import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
 import GHC.Exts (Word#,Int#)
 import GHC.IO (IO(IO))
-import GHC.Word (Word8(W8#))
+import GHC.Word (Word8(W8#),Word32,Word64)
 import System.IO (Handle)
 
 import qualified Data.Bytes.Byte as Byte
@@ -763,3 +767,15 @@ any f = foldr (\b r -> f b || r) False
 all :: (Word8 -> Bool) -> Bytes -> Bool
 {-# inline all #-}
 all f = foldr (\b r -> f b && r) True
+
+-- | Hash byte sequence with 32-bit variant of FNV-1a.
+fnv1a32 :: Bytes -> Word32
+fnv1a32 = foldl'
+  (\acc w -> (fromIntegral @Word8 @Word32 w `xor` acc) * 0x01000193
+  ) 0x811c9dc5
+
+-- | Hash byte sequence with 64-bit variant of FNV-1a.
+fnv1a64 :: Bytes -> Word64
+fnv1a64 = foldl'
+  (\acc w -> (fromIntegral @Word8 @Word64 w `xor` acc) * 0x00000100000001B3
+  ) 0xcbf29ce484222325

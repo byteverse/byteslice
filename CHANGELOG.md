@@ -1,5 +1,10 @@
 # Revision history for byteslice
 
+## 0.2.3.0 -- 2020-??-??
+
+* Add `fnv1a32` and `fnv1a64`, implementation of the 32-bit and
+  64-bit variants of the FNV-1a hash algorithm.
+
 ## 0.2.2.0 -- 2020-02-27
 
 * Add `split4`.

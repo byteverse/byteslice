@@ -174,6 +174,18 @@ tests = testGroup "Bytes"
       case Bytes.split4 0xEF (slicedPack (ws ++ [0xEF] ++ xs ++ [0xEF] ++ ys ++ [0xEF] ++ zs ++ [0xEF] ++ ps)) of
         Just r -> r === (slicedPack ws, slicedPack xs, slicedPack ys, slicedPack zs, slicedPack ps)
         Nothing -> property False
+  , testGroup "FNV-1a"
+    [ testGroup "32-bit"
+      [ testCase "empty" (Bytes.fnv1a32 Bytes.empty @=? 0x811c9dc5)
+      , testCase "a" (Bytes.fnv1a32 (bytes "a") @=? 0xe40c292c)
+      , testCase "foobar" (Bytes.fnv1a32 (bytes "foobar") @=? 0xbf9cf968)
+      ]
+    , testGroup "64-bit"
+      [ testCase "empty" (Bytes.fnv1a64 Bytes.empty @=? 0xcbf29ce484222325)
+      , testCase "a" (Bytes.fnv1a64 (bytes "a") @=? 0xaf63dc4c8601ec8c)
+      , testCase "foobar" (Bytes.fnv1a64 (bytes "foobar") @=? 0x85944171f73967e8)
+      ]
+    ]
   , testGroup "Chunks"
     [ lawsToTest (QCC.eqLaws (Proxy :: Proxy Chunks))
     , lawsToTest (QCC.semigroupLaws (Proxy :: Proxy Chunks))
