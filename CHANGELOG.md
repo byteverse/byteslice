@@ -2,8 +2,11 @@
 
 ## 0.2.3.0 -- 2020-??-??
 
-* Add `fnv1a32` and `fnv1a64`, implementation of the 32-bit and
-  64-bit variants of the FNV-1a hash algorithm.
+* Add `fnv1a32` and `fnv1a64`, implementations of the 32-bit and
+  64-bit variants of the FNV-1a hash algorithm, to both `Data.Bytes`
+  and `Data.Bytes.Chunks`.
+* Add `readFile` to both `Data.Bytes` and `Data.Bytes.Chunks`.
+* Add `foldl'` to `Data.Bytes.Chunks`.
 
 ## 0.2.2.0 -- 2020-02-27
 

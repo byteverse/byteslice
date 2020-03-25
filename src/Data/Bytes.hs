@@ -9,11 +9,11 @@ module Data.Bytes
   ( -- * Types
     Bytes
     -- * Constants
-  , empty
-  , emptyPinned
+  , Pure.empty
+  , Pure.emptyPinned
     -- * Properties
   , null
-  , length
+  , Pure.length
     -- * Decompose
   , uncons
   , unsnoc
@@ -38,7 +38,7 @@ module Data.Bytes
   , dropWhileEnd
     -- * Folds
   , foldl
-  , foldl'
+  , Pure.foldl'
   , foldr
   , foldr'
     -- * Folds with Indices
@@ -86,61 +86,61 @@ module Data.Bytes
     -- ** C Strings
   , equalsCString
     -- * Hashing
-  , fnv1a32
-  , fnv1a64
+  , Pure.fnv1a32
+  , Pure.fnv1a64
     -- * Unsafe Slicing
   , unsafeTake
   , unsafeDrop
   , unsafeIndex
     -- * Copying
-  , unsafeCopy
+  , Pure.unsafeCopy
     -- * Pointers
-  , pin
+  , Pure.pin
   , contents
   , touch
     -- * Conversion
-  , toByteArray
-  , toByteArrayClone
+  , Pure.toByteArray
+  , Pure.toByteArrayClone
   , fromAsciiString
   , fromLatinString
-  , fromByteArray
+  , Pure.fromByteArray
   , toLatinString
     -- * I\/O with Handles
-  , hGet
+  , BIO.hGet
+  , readFile
   , hPut
   ) where
 
-import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicate,any,all)
+import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicate,any,all,readFile)
 
-import Control.Monad.Primitive (PrimMonad,PrimState,primitive_,unsafeIOToPrim)
+import Control.Monad.Primitive (PrimMonad,primitive_,unsafeIOToPrim)
 import Control.Monad.ST.Run (runByteArrayST)
-import Data.Bits (xor)
+import Data.Bytes.Pure (length,pin,fromByteArray)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
-import Data.Primitive (ByteArray(ByteArray),MutableByteArray)
+import Data.Primitive (ByteArray(ByteArray))
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr,plusPtr,castPtr)
 import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
 import GHC.Exts (Word#,Int#)
 import GHC.IO (IO(IO))
-import GHC.Word (Word8(W8#),Word32,Word64)
+import GHC.Word (Word8(W8#))
 import System.IO (Handle)
 
 import qualified Data.Bytes.Byte as Byte
+import qualified Data.Bytes.Chunks as Chunks
+import qualified Data.Bytes.Pure as Pure
 import qualified Data.Foldable as F
 import qualified Data.List as List
 import qualified Data.Primitive as PM
 import qualified Data.Primitive.Ptr as PM
 import qualified GHC.Exts as Exts
 import qualified System.IO as IO
+import qualified Data.Bytes.IO as BIO
 
 -- | Is the byte sequence empty?
 null :: Bytes -> Bool
 null (Bytes _ _ len) = len == 0
-
--- | The length of a slice of bytes.
-length :: Bytes -> Int
-length (Bytes _ _ len) = len
 
 -- | Extract the head and tail of the 'Bytes', returning 'Nothing' if
 -- it is empty.
@@ -471,14 +471,6 @@ foldr f a0 (Bytes arr off0 len0) = go off0 len0 where
     0 -> a0
     _ -> f (PM.indexByteArray arr off) (go (off + 1) (len - 1))
 
--- | Left fold over bytes, strict in the accumulator.
-foldl' :: (a -> Word8 -> a) -> a -> Bytes -> a
-{-# inline foldl' #-}
-foldl' f a0 (Bytes arr off0 len0) = go a0 off0 len0 where
-  go !a !off !len = case len of
-    0 -> a
-    _ -> go (f a (PM.indexByteArray arr off)) (off + 1) (len - 1)
-
 -- | Left fold over bytes, strict in the accumulator. The reduction function
 -- is applied to each element along with its index.
 ifoldl' :: (a -> Int -> Word8 -> a) -> a -> Bytes -> a
@@ -498,23 +490,6 @@ foldr' f a0 (Bytes arr off0 len0) =
     (-1) -> a
     _ -> go (f (PM.indexByteArray arr off) a) (off - 1) (ix - 1)
 
--- | Convert the sliced 'Bytes' to an unsliced 'ByteArray'. This
--- reuses the array backing the sliced 'Bytes' if the slicing metadata
--- implies that all of the bytes are used. Otherwise, it makes a copy.
-toByteArray :: Bytes -> ByteArray
-toByteArray b@(Bytes arr off len)
-  | off == 0, PM.sizeofByteArray arr == len = arr
-  | otherwise = toByteArrayClone b
-
--- | Variant of 'toByteArray' that unconditionally makes a copy of
--- the array backing the sliced 'Bytes' even if the original array
--- could be reused. Prefer 'toByteArray'.
-toByteArrayClone :: Bytes -> ByteArray
-toByteArrayClone (Bytes arr off len) = runByteArrayST $ do
-  m <- PM.newByteArray len
-  PM.copyByteArray m 0 arr off len
-  PM.unsafeFreezeByteArray m
-
 -- | Convert a 'String' consisting of only characters in the ASCII block
 -- to a byte sequence. Any character with a codepoint above @U+007F@ is
 -- replaced by @U+0000@.
@@ -533,10 +508,6 @@ fromLatinString =
 -- | Interpret a byte sequence as text encoded by ISO-8859-1.
 toLatinString :: Bytes -> String
 toLatinString = foldr (\(W8# w) xs -> C# (chr# (word2Int# w)) : xs) []
-
--- | Create a slice of 'Bytes' that spans the entire argument array.
-fromByteArray :: ByteArray -> Bytes
-fromByteArray b = Bytes b 0 (PM.sizeofByteArray b)
 
 compareByteArrays :: ByteArray -> Int -> ByteArray -> Int -> Int -> Ordering
 {-# INLINE compareByteArrays #-}
@@ -651,32 +622,6 @@ stripCStringPrefix !ptr0 (Bytes arr off0 len0) = go (castPtr ptr0 :: Ptr Word8) 
         True -> go (plusPtr ptr 1) (off + 1) (len - 1)
         False -> Nothing
 
--- | Copy the byte sequence into a mutable buffer. The buffer must have
--- enough space to accomodate the byte sequence, but this this is not
--- checked.
-unsafeCopy :: PrimMonad m
-  => MutableByteArray (PrimState m) -- ^ Destination
-  -> Int -- ^ Destination Offset
-  -> Bytes -- ^ Source
-  -> m ()
-{-# inline unsafeCopy #-}
-unsafeCopy dst dstIx (Bytes src srcIx len) =
-  PM.copyByteArray dst dstIx src srcIx len
-
--- | Yields a pinned byte sequence whose contents are identical to those
--- of the original byte sequence. If the @ByteArray@ backing the argument
--- was already pinned, this simply aliases the argument and does not perform
--- any copying.
-pin :: Bytes -> Bytes
-pin b@(Bytes arr _ len) = case PM.isByteArrayPinned arr of
-  True -> b
-  False -> Bytes
-    ( runByteArrayST do
-        dst <- PM.newPinnedByteArray len
-        unsafeCopy dst 0 b
-        PM.unsafeFreezeByteArray dst
-    ) 0 len
-
 -- | Yields a pointer to the beginning of the byte sequence. It is only safe
 -- to call this on a 'Bytes' backed by a pinned @ByteArray@.
 contents :: Bytes -> Ptr Word8
@@ -692,22 +637,6 @@ touch (Bytes (ByteArray arr) _ _) = unsafeIOToPrim
 indexCharArray :: ByteArray -> Int -> Char
 indexCharArray (ByteArray arr) (I# off) = C# (Exts.indexCharArray# arr off)
 
--- | The empty byte sequence.
-empty :: Bytes
-empty = Bytes mempty 0 0
-
--- | The empty byte sequence.
-emptyPinned :: Bytes
-emptyPinned = Bytes
-  ( runByteArrayST
-    (PM.newPinnedByteArray 0 >>= PM.unsafeFreezeByteArray)
-  ) 0 0
-
--- | Read 'Bytes' directly from the specified 'Handle'. The resulting
--- 'Bytes' are pinned. This is implemented with 'hGetBuf'.
-hGet :: Handle -> Int -> IO Bytes
-hGet h i = createPinnedAndTrim i (\p -> IO.hGetBuf h p i)
-
 -- | Outputs 'Bytes' to the specified 'Handle'. This is implemented
 -- with 'hPutBuf'.
 hPut :: Handle -> Bytes -> IO ()
@@ -716,23 +645,12 @@ hPut h b0 = do
   IO.hPutBuf h (contents b1) len
   touchByteArrayIO arr
 
--- Only used internally.
-createPinnedAndTrim :: Int -> (Ptr Word8 -> IO Int) -> IO Bytes
-{-# inline createPinnedAndTrim #-}
-createPinnedAndTrim maxSz f = do
-  arr@(PM.MutableByteArray arr#) <- PM.newPinnedByteArray maxSz
-  sz <- f (PM.mutableByteArrayContents arr)
-  touchMutableByteArrayIO arr
-  PM.shrinkMutablePrimArray (PM.MutablePrimArray @Exts.RealWorld @Word8 arr#) sz
-  r <- PM.unsafeFreezeByteArray arr
-  pure (Bytes r 0 sz)
+-- | Read an entire file strictly into a 'Bytes'.
+readFile :: FilePath -> IO Bytes
+readFile f = Chunks.concat <$> Chunks.readFile f
 
 touchByteArrayIO :: ByteArray -> IO ()
 touchByteArrayIO (ByteArray x) =
-  IO (\s -> (# Exts.touch# x s, () #))
-
-touchMutableByteArrayIO :: MutableByteArray s -> IO ()
-touchMutableByteArrayIO (PM.MutableByteArray x) =
   IO (\s -> (# Exts.touch# x s, () #))
 
 -- | /O(n)/ The intercalate function takes a separator 'Bytes' and a list of
@@ -767,15 +685,3 @@ any f = foldr (\b r -> f b || r) False
 all :: (Word8 -> Bool) -> Bytes -> Bool
 {-# inline all #-}
 all f = foldr (\b r -> f b && r) True
-
--- | Hash byte sequence with 32-bit variant of FNV-1a.
-fnv1a32 :: Bytes -> Word32
-fnv1a32 = foldl'
-  (\acc w -> (fromIntegral @Word8 @Word32 w `xor` acc) * 0x01000193
-  ) 0x811c9dc5
-
--- | Hash byte sequence with 64-bit variant of FNV-1a.
-fnv1a64 :: Bytes -> Word64
-fnv1a64 = foldl'
-  (\acc w -> (fromIntegral @Word8 @Word64 w `xor` acc) * 0x00000100000001B3
-  ) 0xcbf29ce484222325

@@ -1,11 +1,12 @@
 {-# language BangPatterns #-}
 {-# language DerivingStrategies #-}
 {-# language DuplicateRecordFields #-}
-{-# language TypeFamilies #-}
 {-# language MagicHash #-}
-{-# language UnboxedTuples #-}
 {-# language NamedFieldPuns #-}
 {-# language RankNTypes #-}
+{-# language TypeApplications #-}
+{-# language TypeFamilies #-}
+{-# language UnboxedTuples #-}
 
 -- | Chunks of bytes. This is useful as a target for a builder
 -- or as a way to read a large amount of whose size is unknown
@@ -24,6 +25,11 @@ module Data.Bytes.Chunks
   , concatU
   , reverse
   , reverseOnto
+    -- * Folds
+  , foldl'
+    -- * Hashing
+  , fnv1a32
+  , fnv1a64
     -- * Create
   , fromBytes
   , fromByteArray
@@ -31,22 +37,27 @@ module Data.Bytes.Chunks
   , unsafeCopy
     -- * I\/O with Handles
   , hGetContents
+  , readFile
   ) where
 
-import Prelude hiding (length,concat,reverse)
+import Prelude hiding (length,concat,reverse,readFile)
 
+import Control.Exception (IOException,catch)
 import Control.Monad.ST.Run (runIntByteArrayST)
+import Data.Bits (xor)
 import Data.Bytes.Types (Bytes(Bytes))
+import Data.Word (Word8,Word32,Word64)
 import Data.Primitive (ByteArray(..),MutableByteArray(..))
 import GHC.Exts (ByteArray#,MutableByteArray#)
 import GHC.Exts (Int#,State#,Int(I#),(+#))
 import GHC.ST (ST(..))
-import System.IO (Handle)
+import System.IO (Handle,hFileSize,IOMode(ReadMode),withBinaryFile)
 
 import qualified GHC.Exts as Exts
 import qualified Data.Primitive as PM
 import qualified Data.Bytes.Types as B
-import qualified Data.Bytes as Bytes
+import qualified Data.Bytes.Pure as Bytes
+import qualified Data.Bytes.IO as IO
 
 -- | A cons-list of byte sequences.
 data Chunks
@@ -174,16 +185,46 @@ unBa (ByteArray x) = x
 
 -- | Read a handle's entire contents strictly into chunks.
 hGetContents :: Handle -> IO Chunks
-hGetContents !h = do
-  result <- go ChunksNil
-  pure $! reverse result
-  where
+hGetContents !h = hGetContentsCommon ChunksNil h
+
+-- | Read a handle's entire contents strictly into chunks.
+hGetContentsHint :: Int -> Handle -> IO Chunks
+hGetContentsHint !hint !h = do
+  c <- IO.hGet h hint
+  let !r = ChunksCons c ChunksNil
+  if Bytes.length c == hint
+    then pure r
+    else hGetContentsCommon r h
+
+hGetContentsCommon ::
+     Chunks -- reversed chunks
+  -> Handle
+  -> IO Chunks
+hGetContentsCommon !acc0 !h = go acc0 where
   go !acc = do
-    c <- Bytes.hGet h chunkSize
+    c <- IO.hGet h chunkSize
     let !r = ChunksCons c acc
     if Bytes.length c == chunkSize
       then go r
-      else pure r
+      else pure $! reverse r
+
+-- | Read an entire file strictly into chunks. If reading from a
+-- regular file, this makes an effort to read 
+readFile :: FilePath -> IO Chunks
+readFile f = withBinaryFile f ReadMode $ \h -> do
+  -- Implementation copied from bytestring.
+  -- hFileSize fails if file is not regular file (like
+  -- /dev/null). Catch exception and try reading anyway.
+  filesz <- catch (hFileSize h) useZeroIfNotRegularFile
+  let hint = (fromIntegral filesz `max` 255) + 1
+  hGetContentsHint hint h
+  -- Our initial size is one bigger than the file size so that in the
+  -- typical case we will read the whole file in one go and not have
+  -- to allocate any more chunks. We'll still do the right thing if the
+  -- file size is 0 or is changed before we do the read.
+  where
+    useZeroIfNotRegularFile :: IOException -> IO Integer
+    useZeroIfNotRegularFile _ = return 0
 
 chunkSize :: Int
 chunkSize = 16384 - 16
@@ -195,3 +236,22 @@ fromBytes !b = ChunksCons b ChunksNil
 -- | Variant of 'fromBytes' where the single chunk is unsliced.
 fromByteArray :: ByteArray -> Chunks
 fromByteArray !b = fromBytes (Bytes.fromByteArray b)
+
+-- | Left fold over all bytes in the chunks, strict in the accumulator.
+foldl' :: (a -> Word8 -> a) -> a -> Chunks -> a
+{-# inline foldl' #-}
+foldl' g = go where
+  go !a ChunksNil = a
+  go !a (ChunksCons c cs) = go (Bytes.foldl' g a c) cs
+
+-- | Hash byte sequence with 32-bit variant of FNV-1a.
+fnv1a32 :: Chunks -> Word32
+fnv1a32 = foldl'
+  (\acc w -> (fromIntegral @Word8 @Word32 w `xor` acc) * 0x01000193
+  ) 0x811c9dc5
+
+-- | Hash byte sequence with 64-bit variant of FNV-1a.
+fnv1a64 :: Chunks -> Word64
+fnv1a64 = foldl'
+  (\acc w -> (fromIntegral @Word8 @Word64 w `xor` acc) * 0x00000100000001B3
+  ) 0xcbf29ce484222325
