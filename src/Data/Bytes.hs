@@ -51,10 +51,10 @@ module Data.Bytes
   , Byte.splitInit
   , Byte.splitInitU
   , Byte.splitNonEmpty
-  , split1
-  , split2
-  , split3
-  , split4
+  , Byte.split1
+  , Byte.split2
+  , Byte.split3
+  , Byte.split4
     -- * Combining
   , intercalate
     -- * Counting
@@ -96,7 +96,7 @@ module Data.Bytes
   , Pure.unsafeCopy
     -- * Pointers
   , Pure.pin
-  , contents
+  , Pure.contents
   , touch
     -- * Conversion
   , Pure.toByteArray
@@ -108,14 +108,14 @@ module Data.Bytes
     -- * I\/O with Handles
   , BIO.hGet
   , readFile
-  , hPut
+  , BIO.hPut
   ) where
 
 import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicate,any,all,readFile)
 
 import Control.Monad.Primitive (PrimMonad,primitive_,unsafeIOToPrim)
 import Control.Monad.ST.Run (runByteArrayST)
-import Data.Bytes.Pure (length,pin,fromByteArray)
+import Data.Bytes.Pure (length,fromByteArray)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
 import Data.Primitive (ByteArray(ByteArray))
@@ -123,20 +123,17 @@ import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr,plusPtr,castPtr)
 import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
 import GHC.Exts (Word#,Int#)
-import GHC.IO (IO(IO))
 import GHC.Word (Word8(W8#))
-import System.IO (Handle)
 
 import qualified Data.Bytes.Byte as Byte
 import qualified Data.Bytes.Chunks as Chunks
+import qualified Data.Bytes.IO as BIO
 import qualified Data.Bytes.Pure as Pure
 import qualified Data.Foldable as F
 import qualified Data.List as List
 import qualified Data.Primitive as PM
 import qualified Data.Primitive.Ptr as PM
 import qualified GHC.Exts as Exts
-import qualified System.IO as IO
-import qualified Data.Bytes.IO as BIO
 
 -- | Is the byte sequence empty?
 null :: Bytes -> Bool
@@ -283,98 +280,6 @@ stripOptionalSuffix :: Bytes -> Bytes -> Bytes
 stripOptionalSuffix !suf !str = if suf `isSuffixOf` str
   then Bytes (array str) (offset str) (length str - length suf)
   else str
-
--- | Split a byte sequence on the first occurrence of the target
--- byte. The target is removed from the result. For example:
---
--- >>> split1 0xA [0x1,0x2,0xA,0xB]
--- Just ([0x1,0x2],[0xB])
-split1 :: Word8 -> Bytes -> Maybe (Bytes,Bytes)
-{-# inline split1 #-}
-split1 w b@(Bytes arr off len) = case elemIndexLoop# w b of
-  (-1#) -> Nothing
-  i# -> let i = I# i# in
-    Just (Bytes arr off (i - off), Bytes arr (i + 1) (len - (1 + i - off)))
-
--- | Split a byte sequence on the first and second occurrences
--- of the target byte. The target is removed from the result.
--- For example:
---
--- >>> split2 0xA [0x1,0x2,0xA,0xB,0xA,0xA,0xA]
--- Just ([0x1,0x2],[0xB],[0xA,0xA])
-split2 :: Word8 -> Bytes -> Maybe (Bytes,Bytes,Bytes)
-{-# inline split2 #-}
-split2 w b@(Bytes arr off len) = case elemIndexLoop# w b of
-  (-1#) -> Nothing
-  i# -> let i = I# i# in
-    case elemIndexLoop# w (Bytes arr (i + 1) (len - (1 + i - off))) of
-      (-1#) -> Nothing
-      j# -> let j = I# j# in Just
-        ( Bytes arr off (i - off)
-        , Bytes arr (i + 1) (j - (i + 1))
-        , Bytes arr (j + 1) (len - (1 + j - off))
-        )
-
--- | Split a byte sequence on the first, second, and third occurrences
--- of the target byte. The target is removed from the result.
--- For example:
---
--- >>> split3 0xA [0x1,0x2,0xA,0xB,0xA,0xA,0xA]
--- Just ([0x1,0x2],[0xB],[],[0xA])
-split3 :: Word8 -> Bytes -> Maybe (Bytes,Bytes,Bytes,Bytes)
-{-# inline split3 #-}
-split3 w b@(Bytes arr off len) = case elemIndexLoop# w b of
-  (-1#) -> Nothing
-  i# -> let i = I# i# in
-    case elemIndexLoop# w (Bytes arr (i + 1) (len - (1 + i - off))) of
-      (-1#) -> Nothing
-      j# -> let j = I# j# in
-        case elemIndexLoop# w (Bytes arr (j + 1) (len - (1 + j - off))) of
-          (-1#) -> Nothing
-          k# -> let k = I# k# in Just
-            ( Bytes arr off (i - off)
-            , Bytes arr (i + 1) (j - (i + 1))
-            , Bytes arr (j + 1) (k - (j + 1))
-            , Bytes arr (k + 1) (len - (1 + k - off))
-            )
-
--- | Split a byte sequence on the first, second, third, and fourth
--- occurrences of the target byte. The target is removed from the result.
--- For example:
---
--- >>> split4 0xA [0x1,0x2,0xA,0xB,0xA,0xA,0xA]
--- Just ([0x1,0x2],[0xB],[],[],[])
-split4 :: Word8 -> Bytes -> Maybe (Bytes,Bytes,Bytes,Bytes,Bytes)
-{-# inline split4 #-}
-split4 w b@(Bytes arr off len) = case elemIndexLoop# w b of
-  (-1#) -> Nothing
-  i# -> let i = I# i# in
-    case elemIndexLoop# w (Bytes arr (i + 1) (len - (1 + i - off))) of
-      (-1#) -> Nothing
-      j# -> let j = I# j# in
-        case elemIndexLoop# w (Bytes arr (j + 1) (len - (1 + j - off))) of
-          (-1#) -> Nothing
-          k# -> let k = I# k# in
-            case elemIndexLoop# w (Bytes arr (k + 1) (len - (1 + k - off))) of
-              (-1#) -> Nothing
-              m# -> let m = I# m# in Just
-                ( Bytes arr off (i - off)
-                , Bytes arr (i + 1) (j - (i + 1))
-                , Bytes arr (j + 1) (k - (j + 1))
-                , Bytes arr (k + 1) (m - (k + 1))
-                , Bytes arr (m + 1) (len - (1 + m - off))
-                )
-
--- This returns the offset into the byte array. This is not an index
--- that will mean anything to the end user, so it cannot be returned
--- to them.
-elemIndexLoop# :: Word8 -> Bytes -> Int#
-elemIndexLoop# !w (Bytes arr off@(I# off# ) len) = case len of
-  0 -> (-1#)
-  _ -> if PM.indexByteArray arr off == w
-    then off#
-    else elemIndexLoop# w (Bytes arr (off + 1) (len - 1))
-
 
 -- | Is the byte a member of the byte sequence?
 elem :: Word8 -> Bytes -> Bool
@@ -622,11 +527,6 @@ stripCStringPrefix !ptr0 (Bytes arr off0 len0) = go (castPtr ptr0 :: Ptr Word8) 
         True -> go (plusPtr ptr 1) (off + 1) (len - 1)
         False -> Nothing
 
--- | Yields a pointer to the beginning of the byte sequence. It is only safe
--- to call this on a 'Bytes' backed by a pinned @ByteArray@.
-contents :: Bytes -> Ptr Word8
-contents (Bytes arr off _) = plusPtr (PM.byteArrayContents arr) off
-
 -- | Touch the byte array backing the byte sequence. This sometimes needed
 -- after calling 'contents' so that the @ByteArray@ does not get garbage
 -- collected.
@@ -637,21 +537,9 @@ touch (Bytes (ByteArray arr) _ _) = unsafeIOToPrim
 indexCharArray :: ByteArray -> Int -> Char
 indexCharArray (ByteArray arr) (I# off) = C# (Exts.indexCharArray# arr off)
 
--- | Outputs 'Bytes' to the specified 'Handle'. This is implemented
--- with 'hPutBuf'.
-hPut :: Handle -> Bytes -> IO ()
-hPut h b0 = do
-  let b1@(Bytes arr _ len) = pin b0
-  IO.hPutBuf h (contents b1) len
-  touchByteArrayIO arr
-
 -- | Read an entire file strictly into a 'Bytes'.
 readFile :: FilePath -> IO Bytes
 readFile f = Chunks.concat <$> Chunks.readFile f
-
-touchByteArrayIO :: ByteArray -> IO ()
-touchByteArrayIO (ByteArray x) =
-  IO (\s -> (# Exts.touch# x s, () #))
 
 -- | /O(n)/ The intercalate function takes a separator 'Bytes' and a list of
 -- 'Bytes' and concatenates the list elements by interspersing the separator

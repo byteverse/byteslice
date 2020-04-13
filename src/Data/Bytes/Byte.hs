@@ -17,6 +17,10 @@ module Data.Bytes.Byte
   , splitNonEmpty
   , splitInit
   , splitInitU
+  , split1
+  , split2
+  , split3
+  , split4
   ) where
 
 import Prelude hiding (length)
@@ -28,7 +32,7 @@ import Data.List.NonEmpty (NonEmpty((:|)))
 import Data.Primitive (PrimArray(..),MutablePrimArray(..),ByteArray(..))
 import Data.Primitive.Unlifted.Array (UnliftedArray)
 import Data.Word (Word8)
-import GHC.Exts (ByteArray#,MutableByteArray#)
+import GHC.Exts (ByteArray#,MutableByteArray#,Int#,Int(I#))
 import GHC.IO (unsafeIOToST)
 
 import qualified Data.Primitive as PM
@@ -162,3 +166,95 @@ foreign import ccall unsafe "bs_custom.h memchr_ba_many" memchr_ba_many
 
 foreign import ccall unsafe "bs_custom.h count_ba" count_ba
   :: ByteArray# -> Int -> Int -> Word8 -> Int
+
+-- | Split a byte sequence on the first occurrence of the target
+-- byte. The target is removed from the result. For example:
+--
+-- >>> split1 0xA [0x1,0x2,0xA,0xB]
+-- Just ([0x1,0x2],[0xB])
+split1 :: Word8 -> Bytes -> Maybe (Bytes,Bytes)
+{-# inline split1 #-}
+split1 w b@(Bytes arr off len) = case elemIndexLoop# w b of
+  (-1#) -> Nothing
+  i# -> let i = I# i# in
+    Just (Bytes arr off (i - off), Bytes arr (i + 1) (len - (1 + i - off)))
+
+-- | Split a byte sequence on the first and second occurrences
+-- of the target byte. The target is removed from the result.
+-- For example:
+--
+-- >>> split2 0xA [0x1,0x2,0xA,0xB,0xA,0xA,0xA]
+-- Just ([0x1,0x2],[0xB],[0xA,0xA])
+split2 :: Word8 -> Bytes -> Maybe (Bytes,Bytes,Bytes)
+{-# inline split2 #-}
+split2 w b@(Bytes arr off len) = case elemIndexLoop# w b of
+  (-1#) -> Nothing
+  i# -> let i = I# i# in
+    case elemIndexLoop# w (Bytes arr (i + 1) (len - (1 + i - off))) of
+      (-1#) -> Nothing
+      j# -> let j = I# j# in Just
+        ( Bytes arr off (i - off)
+        , Bytes arr (i + 1) (j - (i + 1))
+        , Bytes arr (j + 1) (len - (1 + j - off))
+        )
+
+-- | Split a byte sequence on the first, second, and third occurrences
+-- of the target byte. The target is removed from the result.
+-- For example:
+--
+-- >>> split3 0xA [0x1,0x2,0xA,0xB,0xA,0xA,0xA]
+-- Just ([0x1,0x2],[0xB],[],[0xA])
+split3 :: Word8 -> Bytes -> Maybe (Bytes,Bytes,Bytes,Bytes)
+{-# inline split3 #-}
+split3 w b@(Bytes arr off len) = case elemIndexLoop# w b of
+  (-1#) -> Nothing
+  i# -> let i = I# i# in
+    case elemIndexLoop# w (Bytes arr (i + 1) (len - (1 + i - off))) of
+      (-1#) -> Nothing
+      j# -> let j = I# j# in
+        case elemIndexLoop# w (Bytes arr (j + 1) (len - (1 + j - off))) of
+          (-1#) -> Nothing
+          k# -> let k = I# k# in Just
+            ( Bytes arr off (i - off)
+            , Bytes arr (i + 1) (j - (i + 1))
+            , Bytes arr (j + 1) (k - (j + 1))
+            , Bytes arr (k + 1) (len - (1 + k - off))
+            )
+
+-- | Split a byte sequence on the first, second, third, and fourth
+-- occurrences of the target byte. The target is removed from the result.
+-- For example:
+--
+-- >>> split4 0xA [0x1,0x2,0xA,0xB,0xA,0xA,0xA]
+-- Just ([0x1,0x2],[0xB],[],[],[])
+split4 :: Word8 -> Bytes -> Maybe (Bytes,Bytes,Bytes,Bytes,Bytes)
+{-# inline split4 #-}
+split4 w b@(Bytes arr off len) = case elemIndexLoop# w b of
+  (-1#) -> Nothing
+  i# -> let i = I# i# in
+    case elemIndexLoop# w (Bytes arr (i + 1) (len - (1 + i - off))) of
+      (-1#) -> Nothing
+      j# -> let j = I# j# in
+        case elemIndexLoop# w (Bytes arr (j + 1) (len - (1 + j - off))) of
+          (-1#) -> Nothing
+          k# -> let k = I# k# in
+            case elemIndexLoop# w (Bytes arr (k + 1) (len - (1 + k - off))) of
+              (-1#) -> Nothing
+              m# -> let m = I# m# in Just
+                ( Bytes arr off (i - off)
+                , Bytes arr (i + 1) (j - (i + 1))
+                , Bytes arr (j + 1) (k - (j + 1))
+                , Bytes arr (k + 1) (m - (k + 1))
+                , Bytes arr (m + 1) (len - (1 + m - off))
+                )
+
+-- This returns the offset into the byte array. This is not an index
+-- that will mean anything to the end user, so it cannot be returned
+-- to them.
+elemIndexLoop# :: Word8 -> Bytes -> Int#
+elemIndexLoop# !w (Bytes arr off@(I# off# ) len) = case len of
+  0 -> (-1#)
+  _ -> if PM.indexByteArray arr off == w
+    then off#
+    else elemIndexLoop# w (Bytes arr (off + 1) (len - 1))
+

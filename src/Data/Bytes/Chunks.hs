@@ -27,6 +27,8 @@ module Data.Bytes.Chunks
   , reverseOnto
     -- * Folds
   , foldl'
+    -- * Splitting
+  , split
     -- * Hashing
   , fnv1a32
   , fnv1a64
@@ -38,9 +40,11 @@ module Data.Bytes.Chunks
     -- * I\/O with Handles
   , hGetContents
   , readFile
+  , hPut
+  , writeFile
   ) where
 
-import Prelude hiding (length,concat,reverse,readFile)
+import Prelude hiding (length,concat,reverse,readFile,writeFile)
 
 import Control.Exception (IOException,catch)
 import Control.Monad.ST.Run (runIntByteArrayST)
@@ -51,12 +55,13 @@ import Data.Primitive (ByteArray(..),MutableByteArray(..))
 import GHC.Exts (ByteArray#,MutableByteArray#)
 import GHC.Exts (Int#,State#,Int(I#),(+#))
 import GHC.ST (ST(..))
-import System.IO (Handle,hFileSize,IOMode(ReadMode),withBinaryFile)
+import System.IO (Handle,hFileSize,IOMode(ReadMode,WriteMode),withBinaryFile)
 
 import qualified GHC.Exts as Exts
 import qualified Data.Primitive as PM
 import qualified Data.Bytes.Types as B
 import qualified Data.Bytes.Pure as Bytes
+import qualified Data.Bytes.Byte as Byte
 import qualified Data.Bytes.IO as IO
 
 -- | A cons-list of byte sequences.
@@ -209,7 +214,8 @@ hGetContentsCommon !acc0 !h = go acc0 where
       else pure $! reverse r
 
 -- | Read an entire file strictly into chunks. If reading from a
--- regular file, this makes an effort to read 
+-- regular file, this makes an effort read the file into a single
+-- chunk.
 readFile :: FilePath -> IO Chunks
 readFile f = withBinaryFile f ReadMode $ \h -> do
   -- Implementation copied from bytestring.
@@ -255,3 +261,47 @@ fnv1a64 :: Chunks -> Word64
 fnv1a64 = foldl'
   (\acc w -> (fromIntegral @Word8 @Word64 w `xor` acc) * 0x00000100000001B3
   ) 0xcbf29ce484222325
+
+-- | Outputs 'Chunks' to the specified 'Handle'. This is implemented
+-- with 'hPutBuf'.
+hPut :: Handle -> Chunks -> IO ()
+hPut h = go where
+  go ChunksNil = pure ()
+  go (ChunksCons c cs) = IO.hPut h c *> go cs
+
+-- | Write 'Chunks' to a file, replacing the previous contents of
+-- the file.
+writeFile :: FilePath -> Chunks -> IO ()
+writeFile path cs = withBinaryFile path WriteMode (\h -> hPut h cs)
+
+-- | Break chunks of bytes into contiguous pieces separated by the
+-- byte argument. This is a good producer for list fusion. For this
+-- function to perform well, each chunk should contain multiple separators.
+-- Any piece that spans multiple chunks must be copied.
+split :: Word8 -> Chunks -> [Bytes]
+{-# inline split #-}
+split !w !cs0 = Exts.build
+  (\g x0 ->
+    -- It is possible to optimize for the common case where a
+    -- piece does not span multiple chunks. However, such an
+    -- optimization would actually cause this to tail call in
+    -- two places rather than one and may actually adversely
+    -- affect performance. It hasn't been benchmarked.
+    let go !cs = case splitOnto ChunksNil w cs of
+          (hd,tl) -> let !x = concat (reverse hd) in
+            case tl of
+              ChunksNil -> x0
+              _ -> g x (go tl)
+     in go cs0
+  )
+
+splitOnto :: Chunks -> Word8 -> Chunks -> (Chunks,Chunks)
+{-# inline splitOnto #-}
+splitOnto !acc0 !w !cs0 = go acc0 cs0 where
+  go !acc ChunksNil = (acc,ChunksNil)
+  go !acc (ChunksCons b bs) = case Byte.split1 w b of
+    Nothing -> go (ChunksCons b acc) bs
+    Just (hd,tl) ->
+      let !r1 = ChunksCons hd acc
+          !r2 = ChunksCons tl bs
+       in (r1,r2)

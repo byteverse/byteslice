@@ -9,6 +9,7 @@ module Data.Bytes.Pure
   ( empty
   , emptyPinned
   , pin
+  , contents
   , unsafeCopy
   , toByteArray
   , toByteArrayClone
@@ -21,12 +22,13 @@ module Data.Bytes.Pure
 
 import Prelude hiding (length)
 
-import Data.Bits (xor)
-import Data.Word (Word64,Word32,Word8)
 import Control.Monad.Primitive (PrimState,PrimMonad)
+import Control.Monad.ST.Run (runByteArrayST)
+import Data.Bits (xor)
 import Data.Bytes.Types (Bytes(Bytes))
 import Data.Primitive (ByteArray,MutableByteArray)
-import Control.Monad.ST.Run (runByteArrayST)
+import Data.Word (Word64,Word32,Word8)
+import Foreign.Ptr (Ptr,plusPtr)
 
 import qualified Data.Primitive as PM
 
@@ -112,3 +114,7 @@ foldl' f a0 (Bytes arr off0 len0) = go a0 off0 len0 where
     0 -> a
     _ -> go (f a (PM.indexByteArray arr off)) (off + 1) (len - 1)
 
+-- | Yields a pointer to the beginning of the byte sequence. It is only safe
+-- to call this on a 'Bytes' backed by a pinned @ByteArray@.
+contents :: Bytes -> Ptr Word8
+contents (Bytes arr off _) = plusPtr (PM.byteArrayContents arr) off

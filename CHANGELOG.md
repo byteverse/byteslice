@@ -7,6 +7,8 @@
   and `Data.Bytes.Chunks`.
 * Add `readFile` to both `Data.Bytes` and `Data.Bytes.Chunks`.
 * Add `foldl'` to `Data.Bytes.Chunks`.
+* Add `split` to `Data.Bytes.Chunks`.
+* Add `hPut` and `writeFile` to `Data.Bytes.Chunks`.
 
 ## 0.2.2.0 -- 2020-02-27
 
