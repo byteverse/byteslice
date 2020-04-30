@@ -15,6 +15,7 @@ module Data.Bytes.Byte
   , split
   , splitU
   , splitNonEmpty
+  , splitStream
   , splitInit
   , splitInitU
   , split1
@@ -31,6 +32,8 @@ import Data.Bytes.Types (Bytes(..))
 import Data.List.NonEmpty (NonEmpty((:|)))
 import Data.Primitive (PrimArray(..),MutablePrimArray(..),ByteArray(..))
 import Data.Primitive.Unlifted.Array (UnliftedArray)
+import Data.Tuple.Types (IntPair(IntPair))
+import Data.Vector.Fusion.Stream.Monadic (Stream(Stream),Step(Yield,Done))
 import Data.Word (Word8)
 import GHC.Exts (ByteArray#,MutableByteArray#,Int#,Int(I#))
 import GHC.IO (unsafeIOToST)
@@ -107,6 +110,24 @@ split !w !bs@Bytes{array,offset=arrIx0} = Exts.build
   where
   !lens = splitLengthsAlt w bs
   !lensSz = PM.sizeofPrimArray lens
+
+-- | Variant of 'split' that intended for use with stream fusion rather
+-- than @build@-@foldr@ fusion.
+splitStream :: forall m. Applicative m => Word8 -> Bytes -> Stream m Bytes
+{-# inline [1] splitStream #-}
+splitStream !w !bs@Bytes{array,offset=arrIx0} = Stream step (IntPair 0 arrIx0)
+  where
+  !lens = splitLengthsAlt w bs
+  !lensSz = PM.sizeofPrimArray lens
+  {-# inline [0] step #-}
+  step :: IntPair -> m (Step IntPair Bytes)
+  step (IntPair lenIx arrIx) = if lenIx < lensSz
+    then do
+      let !len = PM.indexPrimArray lens lenIx
+          !element = Bytes array arrIx len
+          !acc = IntPair (lenIx + 1) (arrIx + len + 1)
+      pure (Yield element acc)
+    else pure Done
 
 -- | Variant of 'split' that returns the result as a 'NonEmpty'
 -- instead of @[]@. This is also eligible for stream fusion.

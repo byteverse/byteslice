@@ -5,6 +5,7 @@
 
 module Data.Bytes.Types
   ( Bytes(..)
+  , Bytes#(..)
   , MutableBytes(..)
   , UnmanagedBytes(..)
   ) where
@@ -19,6 +20,7 @@ import Data.Word (Word8)
 import GHC.Base (unsafeChr)
 import GHC.Exts (Int(I#),unsafeCoerce#,sameMutableByteArray#)
 import GHC.Exts (isTrue#,compareByteArrays#,IsList(..))
+import UnliftedBytes (Bytes#(..))
 
 import qualified Data.List as L
 import qualified Data.Foldable as F

@@ -19,6 +19,7 @@ module Data.Bytes.Chunks
     Chunks(..)
     -- * Properties
   , length
+  , null
     -- * Manipulate
   , concat
   , concatPinned
@@ -44,7 +45,7 @@ module Data.Bytes.Chunks
   , writeFile
   ) where
 
-import Prelude hiding (length,concat,reverse,readFile,writeFile)
+import Prelude hiding (length,concat,reverse,readFile,writeFile,null)
 
 import Control.Exception (IOException,catch)
 import Control.Monad.ST.Run (runIntByteArrayST)
@@ -84,6 +85,14 @@ instance Eq Chunks where
   -- TODO: There is a more efficient way to do this, but
   -- it is tedious.
   a == b = concat a == concat b
+
+-- | Are there any bytes in the chunked byte sequences?
+null :: Chunks -> Bool
+null = go where
+  go ChunksNil = True
+  go (ChunksCons (Bytes _ _ len) xs) = case len of
+    0 -> go xs
+    _ -> False
 
 -- | Variant of 'concat' that ensure that the resulting byte
 -- sequence is pinned memory.

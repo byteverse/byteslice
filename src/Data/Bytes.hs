@@ -51,6 +51,7 @@ module Data.Bytes
   , Byte.splitInit
   , Byte.splitInitU
   , Byte.splitNonEmpty
+  , Byte.splitStream
   , Byte.split1
   , Byte.split2
   , Byte.split3
@@ -105,6 +106,7 @@ module Data.Bytes
   , fromLatinString
   , Pure.fromByteArray
   , toLatinString
+  , fromCString#
     -- * I\/O with Handles
   , BIO.hGet
   , readFile
@@ -115,14 +117,15 @@ import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicat
 
 import Control.Monad.Primitive (PrimMonad,primitive_,unsafeIOToPrim)
 import Control.Monad.ST.Run (runByteArrayST)
+import Data.Bytes.Compat (cstringLength#)
 import Data.Bytes.Pure (length,fromByteArray)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
 import Data.Primitive (ByteArray(ByteArray))
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr,plusPtr,castPtr)
-import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
-import GHC.Exts (Word#,Int#)
+import GHC.Exts (Int(I#),Char(C#),Ptr(Ptr),word2Int#,chr#)
+import GHC.Exts (Addr#,Word#,Int#)
 import GHC.Word (Word8(W8#))
 
 import qualified Data.Bytes.Byte as Byte
@@ -413,6 +416,18 @@ fromLatinString =
 -- | Interpret a byte sequence as text encoded by ISO-8859-1.
 toLatinString :: Bytes -> String
 toLatinString = foldr (\(W8# w) xs -> C# (chr# (word2Int# w)) : xs) []
+
+-- | Copy a primitive string literal into managed memory.
+fromCString# :: Addr# -> Bytes
+fromCString# a = Bytes
+  ( runByteArrayST $ do
+      dst@(PM.MutableByteArray dst# ) <- PM.newByteArray len
+      PM.copyPtrToMutablePrimArray
+        (PM.MutablePrimArray dst# ) 0 (Ptr a :: Ptr Word8) len
+      PM.unsafeFreezeByteArray dst
+  ) 0 len
+  where
+  len = I# (cstringLength# a)
 
 compareByteArrays :: ByteArray -> Int -> ByteArray -> Int -> Int -> Ordering
 {-# INLINE compareByteArrays #-}

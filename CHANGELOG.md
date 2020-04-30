@@ -1,14 +1,18 @@
 # Revision history for byteslice
 
-## 0.2.3.0 -- 2020-??-??
+## 0.2.3.0 -- 2020-04-30
 
 * Add `fnv1a32` and `fnv1a64`, implementations of the 32-bit and
   64-bit variants of the FNV-1a hash algorithm, to both `Data.Bytes`
   and `Data.Bytes.Chunks`.
+* Add `Data.Bytes.Chunks.null`.
 * Add `readFile` to both `Data.Bytes` and `Data.Bytes.Chunks`.
 * Add `foldl'` to `Data.Bytes.Chunks`.
 * Add `split` to `Data.Bytes.Chunks`.
+* Add `splitStream` for splitting as a good stream-fusion producer.
 * Add `hPut` and `writeFile` to `Data.Bytes.Chunks`.
+* Add `fromCString#`.
+* Add `Bytes#` newtype on GHC 8.10 and up.
 
 ## 0.2.2.0 -- 2020-02-27
 
