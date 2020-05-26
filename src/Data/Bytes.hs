@@ -408,7 +408,7 @@ fromAsciiString = fromByteArray
 
 -- | Convert a 'String' consisting of only characters representable
 -- by ISO-8859-1. These are encoded with ISO-8859-1. Any character
--- with a codepoint above @U+00FF@ is replace an unspecified byte.
+-- with a codepoint above @U+00FF@ is replaced by an unspecified byte.
 fromLatinString :: String -> Bytes
 fromLatinString =
   fromByteArray . Exts.fromList . map (fromIntegral @Int @Word8 . ord)
