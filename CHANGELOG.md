@@ -1,5 +1,10 @@
 # Revision history for byteslice
 
+## 0.2.4.0 -- 2020-??-??
+
+* Add `toByteString` and `fromByteString`.
+* Add `equalsLatin9`.
+
 ## 0.2.3.0 -- 2020-04-30
 
 * Add `fnv1a32` and `fnv1a64`, implementations of the 32-bit and

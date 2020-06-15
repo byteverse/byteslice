@@ -84,6 +84,7 @@ module Data.Bytes
   , equalsLatin6
   , equalsLatin7
   , equalsLatin8
+  , equalsLatin9
     -- ** C Strings
   , equalsCString
     -- * Hashing
@@ -107,6 +108,10 @@ module Data.Bytes
   , Pure.fromByteArray
   , toLatinString
   , fromCString#
+  , toByteString
+  , fromByteString
+  , toShortByteString
+  , toShortByteStringClone
     -- * I\/O with Handles
   , BIO.hGet
   , readFile
@@ -117,6 +122,8 @@ import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicat
 
 import Control.Monad.Primitive (PrimMonad,primitive_,unsafeIOToPrim)
 import Control.Monad.ST.Run (runByteArrayST)
+import Data.ByteString (ByteString)
+import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Data.Bytes.Compat (cstringLength#)
 import Data.Bytes.Pure (length,fromByteArray)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
@@ -126,8 +133,12 @@ import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr,plusPtr,castPtr)
 import GHC.Exts (Int(I#),Char(C#),Ptr(Ptr),word2Int#,chr#)
 import GHC.Exts (Addr#,Word#,Int#)
+import GHC.IO (unsafeIOToST)
 import GHC.Word (Word8(W8#))
 
+import qualified Data.ByteString as ByteString
+import qualified Data.ByteString.Internal as ByteString
+import qualified Data.ByteString.Unsafe as ByteString
 import qualified Data.Bytes.Byte as Byte
 import qualified Data.Bytes.Chunks as Chunks
 import qualified Data.Bytes.IO as BIO
@@ -137,6 +148,7 @@ import qualified Data.List as List
 import qualified Data.Primitive as PM
 import qualified Data.Primitive.Ptr as PM
 import qualified GHC.Exts as Exts
+import qualified GHC.ForeignPtr as ForeignPtr
 
 -- | Is the byte sequence empty?
 null :: Bytes -> Bool
@@ -518,6 +530,21 @@ equalsLatin8 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 (Bytes arr off len) = case len of
        c7 == indexCharArray arr (off + 7)
   _ -> False
 
+-- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
+-- a 9-tuple whose elements match the characters?
+equalsLatin9 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
+equalsLatin9 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 (Bytes arr off len) = case len of
+  9 -> c0 == indexCharArray arr off &&
+       c1 == indexCharArray arr (off + 1) &&
+       c2 == indexCharArray arr (off + 2) &&
+       c3 == indexCharArray arr (off + 3) &&
+       c4 == indexCharArray arr (off + 4) &&
+       c5 == indexCharArray arr (off + 5) &&
+       c6 == indexCharArray arr (off + 6) &&
+       c7 == indexCharArray arr (off + 7) &&
+       c8 == indexCharArray arr (off + 8)
+  _ -> False
+
 -- | Is the byte sequence equal to the @NUL@-terminated C String?
 -- The C string must be a constant.
 equalsCString :: CString -> Bytes -> Bool
@@ -588,3 +615,44 @@ any f = foldr (\b r -> f b || r) False
 all :: (Word8 -> Bool) -> Bytes -> Bool
 {-# inline all #-}
 all f = foldr (\b r -> f b && r) True
+
+-- | /O(n)/ when unpinned, /O(1)/ when pinned. Create a 'ByteString' from
+-- a byte sequence. This only copies the byte sequence if it is not pinned.
+toByteString :: Bytes -> ByteString
+toByteString !b = pinnedToByteString (Pure.pin b)
+
+-- | Convert the sliced 'Bytes' to an unsliced 'ShortByteString'. This
+-- reuses the array backing the sliced 'Bytes' if the slicing metadata
+-- implies that all of the bytes are used. Otherwise, it makes a copy.
+toShortByteString :: Bytes -> ShortByteString
+toShortByteString !b = case Pure.toByteArray b of
+  PM.ByteArray x -> SBS x
+
+-- | Variant of 'toShortByteString' that unconditionally makes a copy of
+-- the array backing the sliced 'Bytes' even if the original array
+-- could be reused. Prefer 'toShortByteString'.
+toShortByteStringClone :: Bytes -> ShortByteString
+toShortByteStringClone !b = case Pure.toByteArrayClone b of
+  PM.ByteArray x -> SBS x
+
+-- | /O(n)/ Copy a 'ByteString' to a byte sequence.
+fromByteString :: ByteString -> Bytes
+fromByteString !b = Bytes
+  ( runByteArrayST $ unsafeIOToST $ do 
+      dst@(PM.MutableByteArray dst# ) <- PM.newByteArray len
+      ByteString.unsafeUseAsCString b $ \src -> do
+        PM.copyPtrToMutablePrimArray (PM.MutablePrimArray dst# ) 0 src len
+      PM.unsafeFreezeByteArray dst
+  ) 0 len
+  where
+  !len = ByteString.length b
+
+-- Precondition: bytes are pinned
+pinnedToByteString :: Bytes -> ByteString
+pinnedToByteString (Bytes y@(PM.ByteArray x) off len) =
+  ByteString.PS
+    (ForeignPtr.ForeignPtr
+      (case plusPtr (PM.byteArrayContents y) off of {Exts.Ptr p -> p})
+      (ForeignPtr.PlainPtr (Exts.unsafeCoerce# x))
+    )
+    0 len
