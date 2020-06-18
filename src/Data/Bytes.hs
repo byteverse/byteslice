@@ -11,6 +11,7 @@ module Data.Bytes
     -- * Constants
   , Pure.empty
   , Pure.emptyPinned
+  , Pure.emptyPinnedU
     -- * Properties
   , null
   , Pure.length
@@ -103,6 +104,8 @@ module Data.Bytes
     -- * Conversion
   , Pure.toByteArray
   , Pure.toByteArrayClone
+  , Pure.toPinnedByteArray
+  , Pure.toPinnedByteArrayClone
   , fromAsciiString
   , fromLatinString
   , Pure.fromByteArray

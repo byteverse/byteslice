@@ -8,11 +8,14 @@
 module Data.Bytes.Pure
   ( empty
   , emptyPinned
+  , emptyPinnedU
   , pin
   , contents
   , unsafeCopy
   , toByteArray
   , toByteArrayClone
+  , toPinnedByteArray
+  , toPinnedByteArrayClone
   , fromByteArray
   , length
   , foldl'
@@ -36,12 +39,17 @@ import qualified Data.Primitive as PM
 empty :: Bytes
 empty = Bytes mempty 0 0
 
--- | The empty byte sequence.
+-- | The empty pinned byte sequence.
 emptyPinned :: Bytes
 emptyPinned = Bytes
   ( runByteArrayST
     (PM.newPinnedByteArray 0 >>= PM.unsafeFreezeByteArray)
   ) 0 0
+
+-- | The empty pinned byte sequence.
+emptyPinnedU :: ByteArray
+emptyPinnedU = runByteArrayST
+  (PM.newPinnedByteArray 0 >>= PM.unsafeFreezeByteArray)
 
 -- | Yields a pinned byte sequence whose contents are identical to those
 -- of the original byte sequence. If the @ByteArray@ backing the argument
@@ -118,3 +126,22 @@ foldl' f a0 (Bytes arr off0 len0) = go a0 off0 len0 where
 -- to call this on a 'Bytes' backed by a pinned @ByteArray@.
 contents :: Bytes -> Ptr Word8
 contents (Bytes arr off _) = plusPtr (PM.byteArrayContents arr) off
+
+-- | Convert the sliced 'Bytes' to an unsliced 'ByteArray'. This
+-- reuses the array backing the sliced 'Bytes' if the slicing metadata
+-- implies that all of the bytes are used and they are already pinned.
+-- Otherwise, it makes a copy.
+toPinnedByteArray :: Bytes -> ByteArray
+toPinnedByteArray b@(Bytes arr off len)
+  | off == 0, PM.sizeofByteArray arr == len, PM.isByteArrayPinned arr = arr
+  | otherwise = toPinnedByteArrayClone b
+
+-- | Variant of 'toPinnedByteArray' that unconditionally makes a copy of
+-- the array backing the sliced 'Bytes' even if the original array
+-- could be reused. Prefer 'toPinnedByteArray'.
+toPinnedByteArrayClone :: Bytes -> ByteArray
+toPinnedByteArrayClone (Bytes arr off len) = runByteArrayST $ do
+  m <- PM.newPinnedByteArray len
+  PM.copyByteArray m 0 arr off len
+  PM.unsafeFreezeByteArray m
+

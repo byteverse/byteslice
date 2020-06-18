@@ -24,6 +24,7 @@ module Data.Bytes.Chunks
   , concat
   , concatPinned
   , concatU
+  , concatPinnedU
   , reverse
   , reverseOnto
     -- * Folds
@@ -120,6 +121,15 @@ concatU x = case x of
   ChunksCons b y -> case y of
     ChunksNil -> Bytes.toByteArray b
     ChunksCons c z -> case concatFollowing2 b c z of
+      (# _, r #) -> ByteArray r
+
+-- | Variant of 'concatPinned' that returns an unsliced pinned byte sequence.
+concatPinnedU :: Chunks -> ByteArray
+concatPinnedU x = case x of
+  ChunksNil -> Bytes.emptyPinnedU
+  ChunksCons b y -> case y of
+    ChunksNil -> Bytes.toPinnedByteArray b
+    ChunksCons c z -> case concatPinnedFollowing2 b c z of
       (# _, r #) -> ByteArray r
 
 concatFollowing2 :: Bytes -> Bytes -> Chunks -> (# Int#, ByteArray# #)
