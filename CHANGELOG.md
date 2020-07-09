@@ -3,6 +3,7 @@
 ## 0.2.4.0 -- 2020-??-??
 
 * Add `toByteString` and `fromByteString`.
+* Add `fromShortByteString`.
 * Add `equalsLatin9`.
 * Add `toPinnedByteArray`, `toPinnedByteArrayClone`, and `concatPinnedU`.
 

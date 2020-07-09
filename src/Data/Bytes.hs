@@ -113,6 +113,7 @@ module Data.Bytes
   , fromCString#
   , toByteString
   , fromByteString
+  , fromShortByteString
   , toShortByteString
   , toShortByteStringClone
     -- * I\/O with Handles
@@ -637,6 +638,10 @@ toShortByteString !b = case Pure.toByteArray b of
 toShortByteStringClone :: Bytes -> ShortByteString
 toShortByteStringClone !b = case Pure.toByteArrayClone b of
   PM.ByteArray x -> SBS x
+
+-- | /O(1)/ Create 'Bytes' from a 'ShortByteString'.
+fromShortByteString :: ShortByteString -> Bytes
+fromShortByteString (SBS x) = fromByteArray (ByteArray x)
 
 -- | /O(n)/ Copy a 'ByteString' to a byte sequence.
 fromByteString :: ByteString -> Bytes
