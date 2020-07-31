@@ -2,6 +2,7 @@
 {-# language BlockArguments #-}
 {-# language MagicHash #-}
 {-# language NamedFieldPuns #-}
+{-# language RankNTypes #-}
 {-# language TypeApplications #-}
 {-# language UnboxedTuples #-}
 
@@ -116,6 +117,7 @@ module Data.Bytes
   , fromShortByteString
   , toShortByteString
   , toShortByteStringClone
+  , toLowerAsciiByteArrayClone
     -- * I\/O with Handles
   , BIO.hGet
   , readFile
@@ -125,6 +127,7 @@ module Data.Bytes
 import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicate,any,all,readFile)
 
 import Control.Monad.Primitive (PrimMonad,primitive_,unsafeIOToPrim)
+import Control.Monad.ST (ST)
 import Control.Monad.ST.Run (runByteArrayST)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
@@ -642,6 +645,30 @@ toShortByteStringClone !b = case Pure.toByteArrayClone b of
 -- | /O(1)/ Create 'Bytes' from a 'ShortByteString'.
 fromShortByteString :: ShortByteString -> Bytes
 fromShortByteString (SBS x) = fromByteArray (ByteArray x)
+
+-- | /O(n)/ Interpreting the bytes an ASCII-encoded characters, convert
+-- the string to lowercase. This adds @0x20@ to bytes in the range
+-- @[0x41,0x5A]@ and leaves all other bytes alone. Unconditionally
+-- copies the bytes.
+toLowerAsciiByteArrayClone :: Bytes -> ByteArray
+toLowerAsciiByteArrayClone (Bytes src off0 len0) =
+  runByteArrayST action
+  where
+  action :: forall s. ST s ByteArray
+  action = do
+    dst <- PM.newByteArray len0
+    let go !off !ix !len = if len == 0
+          then pure ()
+          else do
+            let w = PM.indexByteArray src off :: Word8
+                w' = if w >= 0x41 && w <= 0x5A
+                  then w + 32
+                  else w
+            PM.writeByteArray dst ix w'
+            go (off + 1) (ix + 1) (len - 1)
+    go off0 0 len0
+    PM.unsafeFreezeByteArray dst
+
 
 -- | /O(n)/ Copy a 'ByteString' to a byte sequence.
 fromByteString :: ByteString -> Bytes

@@ -38,9 +38,15 @@ tests = testGroup "Bytes"
   , lawsToTest (QCC.ordLaws (Proxy :: Proxy Bytes))
   , lawsToTest (QCC.semigroupLaws (Proxy :: Proxy Bytes))
   , lawsToTest (QCC.monoidLaws (Proxy :: Proxy Bytes))
-  , testGroup "isPrefixOf"
+  , testGroup "toLowerAsciiByteArrayClone"
     [ testCase "A" $ THU.assertBool "" $
         Bytes.isPrefixOf (bytes "hey") (bytes "hey man")
+    ]
+  , testGroup "isPrefixOf"
+    [ testCase "A" $
+        Bytes.toLowerAsciiByteArrayClone (bytes "FooBar")
+        @=?
+        pack "foobar"
     , testCase "B" $ THU.assertBool "" $
         not (Bytes.isPrefixOf (bytes "an") (bytes "hey man"))
     ]

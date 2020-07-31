@@ -6,6 +6,7 @@
 * Add `fromShortByteString`.
 * Add `equalsLatin9`.
 * Add `toPinnedByteArray`, `toPinnedByteArrayClone`, and `concatPinnedU`.
+* Add `toLowerAsciiByteArrayClone`.
 
 ## 0.2.3.0 -- 2020-04-30
 
