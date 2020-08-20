@@ -17,6 +17,10 @@ copyright: 2019 Andrew Martin
 category: Data
 extra-source-files: CHANGELOG.md
 
+flag avoid-rawmemchr
+    default: true
+    description: Avoid using rawmemchr which is non-portable GNU libc only
+
 library
   exposed-modules:
     Data.Bytes
@@ -50,6 +54,8 @@ library
   includes: bs_custom.h
   install-includes: bs_custom.h
   c-sources: cbits/bs_custom.c
+  if flag(avoid-rawmemchr)
+    cc-options: -DAVOID_RAWMEMCHR=1
 
 test-suite test
   default-language: Haskell2010
