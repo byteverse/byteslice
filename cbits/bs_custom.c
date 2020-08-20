@@ -19,7 +19,7 @@ HsInt memchr_ba_many(unsigned char *p, HsInt off, HsInt len, HsInt *sizes, HsInt
   p = p + off;
   total = 0;
   for (szIx = 0; szIx < sizesLen; ++szIx) {
-#ifdef __linux__
+#if defined(__linux__) && !AVOID_RAWMEMCHR
     pos = (unsigned char*)(rawmemchr((void*)p,(int)w));
     delta = (HsInt)(pos - p);
 #else
