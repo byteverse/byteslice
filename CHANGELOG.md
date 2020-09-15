@@ -4,7 +4,7 @@
 
 * Add `toByteString` and `fromByteString`.
 * Add `fromShortByteString`.
-* Add `equalsLatin9`.
+* Add `equalsLatin(9|10|11|12)`.
 * Add `toPinnedByteArray`, `toPinnedByteArrayClone`, and `concatPinnedU`.
 * Add `toLowerAsciiByteArrayClone`.
 

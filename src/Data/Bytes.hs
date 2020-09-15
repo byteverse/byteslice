@@ -87,6 +87,9 @@ module Data.Bytes
   , equalsLatin7
   , equalsLatin8
   , equalsLatin9
+  , equalsLatin10
+  , equalsLatin11
+  , equalsLatin12
     -- ** C Strings
   , equalsCString
     -- * Hashing
@@ -550,6 +553,57 @@ equalsLatin9 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 (Bytes arr off len) = case len 
        c6 == indexCharArray arr (off + 6) &&
        c7 == indexCharArray arr (off + 7) &&
        c8 == indexCharArray arr (off + 8)
+  _ -> False
+
+-- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
+-- a 10-tuple whose elements match the characters?
+equalsLatin10 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
+equalsLatin10 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 !c9 (Bytes arr off len) = case len of
+  10 -> c0 == indexCharArray arr off &&
+        c1 == indexCharArray arr (off + 1) &&
+        c2 == indexCharArray arr (off + 2) &&
+        c3 == indexCharArray arr (off + 3) &&
+        c4 == indexCharArray arr (off + 4) &&
+        c5 == indexCharArray arr (off + 5) &&
+        c6 == indexCharArray arr (off + 6) &&
+        c7 == indexCharArray arr (off + 7) &&
+        c8 == indexCharArray arr (off + 8) &&
+        c9 == indexCharArray arr (off + 9)
+  _ -> False
+
+-- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
+-- a 11-tuple whose elements match the characters?
+equalsLatin11 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
+equalsLatin11 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 !c9 !c10 (Bytes arr off len) = case len of
+  11 -> c0 == indexCharArray arr off &&
+        c1 == indexCharArray arr (off + 1) &&
+        c2 == indexCharArray arr (off + 2) &&
+        c3 == indexCharArray arr (off + 3) &&
+        c4 == indexCharArray arr (off + 4) &&
+        c5 == indexCharArray arr (off + 5) &&
+        c6 == indexCharArray arr (off + 6) &&
+        c7 == indexCharArray arr (off + 7) &&
+        c8 == indexCharArray arr (off + 8) &&
+        c9 == indexCharArray arr (off + 9) &&
+        c10 == indexCharArray arr (off + 10)
+  _ -> False
+
+-- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
+-- a 12-tuple whose elements match the characters?
+equalsLatin12 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
+equalsLatin12 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 !c9 !c10 !c11 (Bytes arr off len) = case len of
+  12 -> c0 == indexCharArray arr off &&
+        c1 == indexCharArray arr (off + 1) &&
+        c2 == indexCharArray arr (off + 2) &&
+        c3 == indexCharArray arr (off + 3) &&
+        c4 == indexCharArray arr (off + 4) &&
+        c5 == indexCharArray arr (off + 5) &&
+        c6 == indexCharArray arr (off + 6) &&
+        c7 == indexCharArray arr (off + 7) &&
+        c8 == indexCharArray arr (off + 8) &&
+        c9 == indexCharArray arr (off + 9) &&
+        c10 == indexCharArray arr (off + 10) &&
+        c11 == indexCharArray arr (off + 11)
   _ -> False
 
 -- | Is the byte sequence equal to the @NUL@-terminated C String?
