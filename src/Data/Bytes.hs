@@ -1,5 +1,6 @@
 {-# language BangPatterns #-}
 {-# language BlockArguments #-}
+{-# language DuplicateRecordFields #-}
 {-# language MagicHash #-}
 {-# language NamedFieldPuns #-}
 {-# language RankNTypes #-}
@@ -60,6 +61,7 @@ module Data.Bytes
   , Byte.split4
     -- * Combining
   , intercalate
+  , intercalateByte2
     -- * Counting
   , Byte.count
     -- * Prefix and Suffix
@@ -153,6 +155,7 @@ import qualified Data.Bytes.Byte as Byte
 import qualified Data.Bytes.Chunks as Chunks
 import qualified Data.Bytes.IO as BIO
 import qualified Data.Bytes.Pure as Pure
+import qualified Data.Bytes.Types as Types
 import qualified Data.Foldable as F
 import qualified Data.List as List
 import qualified Data.Primitive as PM
@@ -666,6 +669,25 @@ intercalate (Bytes sarr soff slen) (Bytes arr0 off0 len0 : bs) = Bytes r 0 fullL
         pure (currLen + len + slen)
       ) len0 bs
     PM.unsafeFreezeByteArray marr
+
+-- | Specialization of 'intercalate' where the separator is a single byte and
+-- there are exactly two byte sequences that are being concatenated.
+intercalateByte2 ::
+     Word8 -- ^ Separator
+  -> Bytes -- ^ First byte sequence
+  -> Bytes -- ^ Second byte sequence
+  -> Bytes
+intercalateByte2 !sep !a !b = Bytes
+  { Types.array = runByteArrayST $ do
+      dst <- PM.newByteArray len
+      Pure.unsafeCopy dst 0 a
+      PM.writeByteArray dst (length a) sep
+      Pure.unsafeCopy dst (length a + 1) b
+      PM.unsafeFreezeByteArray dst
+  , Types.length = len
+  , Types.offset = 0
+  }
+  where len = length a + length b + 1
 
 -- | /O(n)/ Returns true if any byte in the sequence satisfies the predicate.
 any :: (Word8 -> Bool) -> Bytes -> Bool

@@ -7,6 +7,7 @@
 * Add `equalsLatin(9|10|11|12)`.
 * Add `toPinnedByteArray`, `toPinnedByteArrayClone`, and `concatPinnedU`.
 * Add `toLowerAsciiByteArrayClone`.
+* Add `intercalateByte2`.
 
 ## 0.2.3.0 -- 2020-04-30
 
