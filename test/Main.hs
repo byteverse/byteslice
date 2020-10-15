@@ -154,6 +154,14 @@ tests = testGroup "Bytes"
       [Bytes.fromAsciiString "hello", Bytes.fromAsciiString "world"]
       @=?
       (Bytes.splitInit 0x0A (Bytes.fromAsciiString "hello\nworld\nthere"))
+  , testProperty "splitEnd1" $ \(x :: Word8) (xs :: [Word8]) ->
+      case ByteString.split x (ByteString.pack xs) of
+        [] -> Bytes.splitEnd1 x (slicedPack xs) === Nothing
+        [_] -> Bytes.splitEnd1 x (slicedPack xs) === Nothing
+        [y1,z1] -> case Bytes.splitEnd1 x (slicedPack xs) of
+          Nothing -> property False
+          Just (y2,z2) -> (y1,z1) === (bytesToByteString y2, bytesToByteString z2)
+        _ -> property Discard
   , testProperty "split1" $ \(x :: Word8) (xs :: [Word8]) ->
       case ByteString.split x (ByteString.pack xs) of
         [] -> Bytes.split1 x (slicedPack xs) === Nothing
@@ -190,6 +198,7 @@ tests = testGroup "Bytes"
       [ testCase "empty" (Bytes.fnv1a64 Bytes.empty @=? 0xcbf29ce484222325)
       , testCase "a" (Bytes.fnv1a64 (bytes "a") @=? 0xaf63dc4c8601ec8c)
       , testCase "foobar" (Bytes.fnv1a64 (bytes "foobar") @=? 0x85944171f73967e8)
+      , testCase "google.com" (Bytes.fnv1a64 (bytes "google.com") @=? 0xe1a2c1ae38dcdf45)
       ]
     ]
   , testGroup "Chunks"

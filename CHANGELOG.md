@@ -8,6 +8,7 @@
 * Add `toPinnedByteArray`, `toPinnedByteArrayClone`, and `concatPinnedU`.
 * Add `toLowerAsciiByteArrayClone`.
 * Add `intercalateByte2`.
+* Add `splitEnd1`.
 
 ## 0.2.3.0 -- 2020-04-30
 

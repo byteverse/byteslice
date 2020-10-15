@@ -22,6 +22,7 @@ module Data.Bytes.Byte
   , split2
   , split3
   , split4
+  , splitEnd1
   ) where
 
 import Prelude hiding (length)
@@ -279,3 +280,23 @@ elemIndexLoop# !w (Bytes arr off@(I# off# ) len) = case len of
     then off#
     else elemIndexLoop# w (Bytes arr (off + 1) (len - 1))
 
+-- Variant of elemIndexLoop# that starts at the end. Similarly, returns
+-- negative one if the element is not found.
+elemIndexLoopBackwards# :: Word8 -> ByteArray -> Int -> Int -> Int#
+elemIndexLoopBackwards# !w !arr !start !pos@(I# pos#) = if pos < start
+  then (-1#)
+  else if PM.indexByteArray arr pos == w
+    then pos#
+    else elemIndexLoopBackwards# w arr start (pos - 1)
+
+-- | Split a byte sequence on the last occurrence of the target
+-- byte. The target is removed from the result. For example:
+--
+-- >>> split1 0xA [0x1,0x2,0xA,0xB,0xA,0xC]
+-- Just ([0x1,0x2,0xA,0xB],[0xC])
+splitEnd1 :: Word8 -> Bytes -> Maybe (Bytes,Bytes)
+{-# inline splitEnd1 #-}
+splitEnd1 !w (Bytes arr off len) = case elemIndexLoopBackwards# w arr off (off + len - 1) of
+  (-1#) -> Nothing
+  i# -> let i = I# i# in
+    Just (Bytes arr off (i - off), Bytes arr (i + 1) (len - (1 + i - off)))

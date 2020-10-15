@@ -49,16 +49,20 @@ module Data.Bytes
     -- * Common Folds
   , elem
     -- * Splitting
+    -- ** Unlimited
   , Byte.split
   , Byte.splitU
   , Byte.splitInit
   , Byte.splitInitU
   , Byte.splitNonEmpty
   , Byte.splitStream
+    -- ** Fixed from Beginning
   , Byte.split1
   , Byte.split2
   , Byte.split3
   , Byte.split4
+    -- ** Fixed from End
+  , Byte.splitEnd1
     -- * Combining
   , intercalate
   , intercalateByte2
