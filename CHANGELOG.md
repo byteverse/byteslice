@@ -1,6 +1,6 @@
 # Revision history for byteslice
 
-## 0.2.4.0 -- 2020-??-??
+## 0.2.4.0 -- 2020-10-15
 
 * Add `toByteString` and `fromByteString`.
 * Add `fromShortByteString`.
