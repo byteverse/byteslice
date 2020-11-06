@@ -121,7 +121,7 @@ module Data.Bytes
   , Pure.fromByteArray
   , toLatinString
   , fromCString#
-  , toByteString
+  , Pure.toByteString
   , fromByteString
   , fromShortByteString
   , toShortByteString
@@ -153,7 +153,6 @@ import GHC.IO (unsafeIOToST)
 import GHC.Word (Word8(W8#))
 
 import qualified Data.ByteString as ByteString
-import qualified Data.ByteString.Internal as ByteString
 import qualified Data.ByteString.Unsafe as ByteString
 import qualified Data.Bytes.Byte as Byte
 import qualified Data.Bytes.Chunks as Chunks
@@ -165,7 +164,6 @@ import qualified Data.List as List
 import qualified Data.Primitive as PM
 import qualified Data.Primitive.Ptr as PM
 import qualified GHC.Exts as Exts
-import qualified GHC.ForeignPtr as ForeignPtr
 
 -- | Is the byte sequence empty?
 null :: Bytes -> Bool
@@ -703,11 +701,6 @@ all :: (Word8 -> Bool) -> Bytes -> Bool
 {-# inline all #-}
 all f = foldr (\b r -> f b && r) True
 
--- | /O(n)/ when unpinned, /O(1)/ when pinned. Create a 'ByteString' from
--- a byte sequence. This only copies the byte sequence if it is not pinned.
-toByteString :: Bytes -> ByteString
-toByteString !b = pinnedToByteString (Pure.pin b)
-
 -- | Convert the sliced 'Bytes' to an unsliced 'ShortByteString'. This
 -- reuses the array backing the sliced 'Bytes' if the slicing metadata
 -- implies that all of the bytes are used. Otherwise, it makes a copy.
@@ -762,12 +755,3 @@ fromByteString !b = Bytes
   where
   !len = ByteString.length b
 
--- Precondition: bytes are pinned
-pinnedToByteString :: Bytes -> ByteString
-pinnedToByteString (Bytes y@(PM.ByteArray x) off len) =
-  ByteString.PS
-    (ForeignPtr.ForeignPtr
-      (case plusPtr (PM.byteArrayContents y) off of {Exts.Ptr p -> p})
-      (ForeignPtr.PlainPtr (Exts.unsafeCoerce# x))
-    )
-    0 len

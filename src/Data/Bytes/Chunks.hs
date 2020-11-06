@@ -25,6 +25,7 @@ module Data.Bytes.Chunks
   , concatPinned
   , concatU
   , concatPinnedU
+  , concatByteString
   , reverse
   , reverseOnto
     -- * Folds
@@ -51,20 +52,21 @@ import Prelude hiding (length,concat,reverse,readFile,writeFile,null)
 import Control.Exception (IOException,catch)
 import Control.Monad.ST.Run (runIntByteArrayST)
 import Data.Bits (xor)
+import Data.ByteString (ByteString)
 import Data.Bytes.Types (Bytes(Bytes))
-import Data.Word (Word8,Word32,Word64)
 import Data.Primitive (ByteArray(..),MutableByteArray(..))
+import Data.Word (Word8,Word32,Word64)
 import GHC.Exts (ByteArray#,MutableByteArray#)
 import GHC.Exts (Int#,State#,Int(I#),(+#))
 import GHC.ST (ST(..))
 import System.IO (Handle,hFileSize,IOMode(ReadMode,WriteMode),withBinaryFile)
 
-import qualified GHC.Exts as Exts
-import qualified Data.Primitive as PM
-import qualified Data.Bytes.Types as B
-import qualified Data.Bytes.Pure as Bytes
 import qualified Data.Bytes.Byte as Byte
 import qualified Data.Bytes.IO as IO
+import qualified Data.Bytes.Pure as Bytes
+import qualified Data.Bytes.Types as B
+import qualified Data.Primitive as PM
+import qualified GHC.Exts as Exts
 
 -- | A cons-list of byte sequences.
 data Chunks
@@ -104,6 +106,10 @@ concatPinned x = case x of
     ChunksNil -> Bytes.pin b
     ChunksCons c z -> case concatPinnedFollowing2 b c z of
       (# len, r #) -> Bytes (ByteArray r) 0 (I# len)
+
+-- | Concatenate chunks into a strict bytestring.
+concatByteString :: Chunks -> ByteString
+concatByteString c = Bytes.pinnedToByteString (concatPinned c)
 
 -- | Concatenate chunks into a single contiguous byte sequence.
 concat :: Chunks -> Bytes

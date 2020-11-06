@@ -21,6 +21,8 @@ module Data.Bytes.Pure
   , foldl'
   , fnv1a32
   , fnv1a64
+  , toByteString
+  , pinnedToByteString
   ) where
 
 import Prelude hiding (length)
@@ -28,12 +30,16 @@ import Prelude hiding (length)
 import Control.Monad.Primitive (PrimState,PrimMonad)
 import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bits (xor)
+import Data.ByteString (ByteString)
 import Data.Bytes.Types (Bytes(Bytes))
 import Data.Primitive (ByteArray,MutableByteArray)
 import Data.Word (Word64,Word32,Word8)
 import Foreign.Ptr (Ptr,plusPtr)
 
+import qualified Data.ByteString.Internal as ByteString
 import qualified Data.Primitive as PM
+import qualified GHC.Exts as Exts
+import qualified GHC.ForeignPtr as ForeignPtr
 
 -- | The empty byte sequence.
 empty :: Bytes
@@ -145,3 +151,17 @@ toPinnedByteArrayClone (Bytes arr off len) = runByteArrayST $ do
   PM.copyByteArray m 0 arr off len
   PM.unsafeFreezeByteArray m
 
+-- | /O(n)/ when unpinned, /O(1)/ when pinned. Create a 'ByteString' from
+-- a byte sequence. This only copies the byte sequence if it is not pinned.
+toByteString :: Bytes -> ByteString
+toByteString !b = pinnedToByteString (pin b)
+
+-- Precondition: bytes are pinned
+pinnedToByteString :: Bytes -> ByteString
+pinnedToByteString (Bytes y@(PM.ByteArray x) off len) =
+  ByteString.PS
+    (ForeignPtr.ForeignPtr
+      (case plusPtr (PM.byteArrayContents y) off of {Exts.Ptr p -> p})
+      (ForeignPtr.PlainPtr (Exts.unsafeCoerce# x))
+    )
+    0 len
