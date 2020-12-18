@@ -3,6 +3,7 @@
 ## 0.2.5.0 -- 2020-??-??
 
 * Add `Data.Bytes.Chunks.concatByteString`.
+* Expose `pinnedToByteString` to end users. 
 
 ## 0.2.4.0 -- 2020-10-15
 

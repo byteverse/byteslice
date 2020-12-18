@@ -122,6 +122,7 @@ module Data.Bytes
   , toLatinString
   , fromCString#
   , Pure.toByteString
+  , Pure.pinnedToByteString
   , fromByteString
   , fromShortByteString
   , toShortByteString
@@ -754,4 +755,3 @@ fromByteString !b = Bytes
   ) 0 len
   where
   !len = ByteString.length b
-
