@@ -1,6 +1,6 @@
 # Revision history for byteslice
 
-## 0.2.5.0 -- 2020-??-??
+## 0.2.5.0 -- 2021-01-22
 
 * Add `Data.Bytes.Chunks.concatByteString`.
 * Expose `pinnedToByteString` to end users. 
