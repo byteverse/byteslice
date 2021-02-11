@@ -208,9 +208,11 @@ reverseOnto !x (ChunksCons y ys) =
   reverseOnto (ChunksCons y x) ys
 
 unI :: Int -> Int#
+{-# inline unI #-}
 unI (I# i) = i
 
 unBa :: ByteArray -> ByteArray#
+{-# inline unBa #-}
 unBa (ByteArray x) = x
 
 -- | Read a handle's entire contents strictly into chunks.
@@ -277,15 +279,15 @@ foldl' g = go where
 
 -- | Hash byte sequence with 32-bit variant of FNV-1a.
 fnv1a32 :: Chunks -> Word32
-fnv1a32 = foldl'
+fnv1a32 !b = foldl'
   (\acc w -> (fromIntegral @Word8 @Word32 w `xor` acc) * 0x01000193
-  ) 0x811c9dc5
+  ) 0x811c9dc5 b
 
 -- | Hash byte sequence with 64-bit variant of FNV-1a.
 fnv1a64 :: Chunks -> Word64
-fnv1a64 = foldl'
+fnv1a64 !b = foldl'
   (\acc w -> (fromIntegral @Word8 @Word64 w `xor` acc) * 0x00000100000001B3
-  ) 0xcbf29ce484222325
+  ) 0xcbf29ce484222325 b
 
 -- | Outputs 'Chunks' to the specified 'Handle'. This is implemented
 -- with 'hPutBuf'.

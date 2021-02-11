@@ -168,11 +168,13 @@ import qualified GHC.Exts as Exts
 
 -- | Is the byte sequence empty?
 null :: Bytes -> Bool
+{-# inline null #-}
 null (Bytes _ _ len) = len == 0
 
 -- | Extract the head and tail of the 'Bytes', returning 'Nothing' if
 -- it is empty.
 uncons :: Bytes -> Maybe (Word8, Bytes)
+{-# inline uncons #-}
 uncons b = case length b of
   0 -> Nothing
   _ -> Just (unsafeIndex b 0, unsafeDrop 1 b)
@@ -180,6 +182,7 @@ uncons b = case length b of
 -- | Extract the @init@ and @last@ of the 'Bytes', returning 'Nothing' if
 -- it is empty.
 unsnoc :: Bytes -> Maybe (Bytes, Word8)
+{-# inline unsnoc #-}
 unsnoc b@(Bytes arr off len) = case len of
   0 -> Nothing
   _ -> let !len' = len - 1 in
@@ -188,6 +191,7 @@ unsnoc b@(Bytes arr off len) = case len of
 -- | Does the byte sequence begin with the given byte? False if the
 -- byte sequence is empty.
 isBytePrefixOf :: Word8 -> Bytes -> Bool
+{-# inline isBytePrefixOf #-}
 isBytePrefixOf w b = case length b of
   0 -> False
   _ -> unsafeIndex b 0 == w
@@ -234,18 +238,22 @@ longestCommonPrefix a b = loop 0
 
 -- | Create a byte sequence with one byte.
 singleton :: Word8 -> Bytes
+{-# inline singleton #-}
 singleton !a = Bytes (singletonU a) 0 1
 
 -- | Create a byte sequence with two bytes.
 doubleton :: Word8 -> Word8 -> Bytes
+{-# inline doubleton #-}
 doubleton !a !b = Bytes (doubletonU a b) 0 2
 
 -- | Create a byte sequence with three bytes.
 tripleton :: Word8 -> Word8 -> Word8 -> Bytes
+{-# inline tripleton #-}
 tripleton !a !b !c = Bytes (tripletonU a b c) 0 3
 
 -- | Create an unsliced byte sequence with one byte.
 singletonU :: Word8 -> ByteArray
+{-# inline singletonU #-}
 singletonU !a = runByteArrayST do
   arr <- PM.newByteArray 1
   PM.writeByteArray arr 0 a
@@ -253,6 +261,7 @@ singletonU !a = runByteArrayST do
 
 -- | Create an unsliced byte sequence with two bytes.
 doubletonU :: Word8 -> Word8 -> ByteArray
+{-# inline doubletonU #-}
 doubletonU !a !b = runByteArrayST do
   arr <- PM.newByteArray 2
   PM.writeByteArray arr 0 a
@@ -261,6 +270,7 @@ doubletonU !a !b = runByteArrayST do
 
 -- | Create an unsliced byte sequence with three bytes.
 tripletonU :: Word8 -> Word8 -> Word8 -> ByteArray
+{-# inline tripletonU #-}
 tripletonU !a !b !c = runByteArrayST do
   arr <- PM.newByteArray 3
   PM.writeByteArray arr 0 a
@@ -336,6 +346,7 @@ dropWhile k b = unsafeDrop (countWhile k b) b
 -- | Index into the byte sequence at the given position. This index
 -- must be less than the length.
 unsafeIndex :: Bytes -> Int -> Word8
+{-# inline unsafeIndex #-}
 unsafeIndex (Bytes arr off _) ix = PM.indexByteArray arr (off + ix)
 
 -- | /O(n)/ 'dropWhileEnd' @p@ @b@ returns the prefix remaining after
@@ -465,6 +476,7 @@ compareByteArrays (ByteArray ba1#) (I# off1#) (ByteArray ba2#) (I# off2#) (I# n#
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- a singleton whose element matches the character?
 equalsLatin1 :: Char -> Bytes -> Bool
+{-# inline equalsLatin1 #-}
 equalsLatin1 !c0 (Bytes arr off len) = case len of
   1 -> c0 == indexCharArray arr off
   _ -> False
@@ -706,6 +718,7 @@ all f = foldr (\b r -> f b && r) True
 -- reuses the array backing the sliced 'Bytes' if the slicing metadata
 -- implies that all of the bytes are used. Otherwise, it makes a copy.
 toShortByteString :: Bytes -> ShortByteString
+{-# inline toShortByteString #-}
 toShortByteString !b = case Pure.toByteArray b of
   PM.ByteArray x -> SBS x
 
@@ -713,11 +726,13 @@ toShortByteString !b = case Pure.toByteArray b of
 -- the array backing the sliced 'Bytes' even if the original array
 -- could be reused. Prefer 'toShortByteString'.
 toShortByteStringClone :: Bytes -> ShortByteString
+{-# inline toShortByteStringClone #-}
 toShortByteStringClone !b = case Pure.toByteArrayClone b of
   PM.ByteArray x -> SBS x
 
 -- | /O(1)/ Create 'Bytes' from a 'ShortByteString'.
 fromShortByteString :: ShortByteString -> Bytes
+{-# inline fromShortByteString #-}
 fromShortByteString (SBS x) = fromByteArray (ByteArray x)
 
 -- | /O(n)/ Interpreting the bytes an ASCII-encoded characters, convert

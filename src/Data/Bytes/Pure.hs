@@ -75,6 +75,7 @@ pin b@(Bytes arr _ len) = case PM.isByteArrayPinned arr of
 -- reuses the array backing the sliced 'Bytes' if the slicing metadata
 -- implies that all of the bytes are used. Otherwise, it makes a copy.
 toByteArray :: Bytes -> ByteArray
+{-# inline toByteArray #-}
 toByteArray b@(Bytes arr off len)
   | off == 0, PM.sizeofByteArray arr == len = arr
   | otherwise = toByteArrayClone b
@@ -83,6 +84,7 @@ toByteArray b@(Bytes arr off len)
 -- the array backing the sliced 'Bytes' even if the original array
 -- could be reused. Prefer 'toByteArray'.
 toByteArrayClone :: Bytes -> ByteArray
+{-# inline toByteArrayClone #-}
 toByteArrayClone (Bytes arr off len) = runByteArrayST $ do
   m <- PM.newByteArray len
   PM.copyByteArray m 0 arr off len
@@ -102,23 +104,25 @@ unsafeCopy dst dstIx (Bytes src srcIx len) =
 
 -- | Create a slice of 'Bytes' that spans the entire argument array.
 fromByteArray :: ByteArray -> Bytes
+{-# inline fromByteArray #-}
 fromByteArray b = Bytes b 0 (PM.sizeofByteArray b)
 
 -- | The length of a slice of bytes.
 length :: Bytes -> Int
+{-# inline length #-}
 length (Bytes _ _ len) = len
 
 -- | Hash byte sequence with 32-bit variant of FNV-1a.
 fnv1a32 :: Bytes -> Word32
-fnv1a32 = foldl'
+fnv1a32 !b = foldl'
   (\acc w -> (fromIntegral @Word8 @Word32 w `xor` acc) * 0x01000193
-  ) 0x811c9dc5
+  ) 0x811c9dc5 b
 
 -- | Hash byte sequence with 64-bit variant of FNV-1a.
 fnv1a64 :: Bytes -> Word64
-fnv1a64 = foldl'
+fnv1a64 !b = foldl'
   (\acc w -> (fromIntegral @Word8 @Word64 w `xor` acc) * 0x00000100000001B3
-  ) 0xcbf29ce484222325
+  ) 0xcbf29ce484222325 b
 
 -- | Left fold over bytes, strict in the accumulator.
 foldl' :: (a -> Word8 -> a) -> a -> Bytes -> a
@@ -131,6 +135,7 @@ foldl' f a0 (Bytes arr off0 len0) = go a0 off0 len0 where
 -- | Yields a pointer to the beginning of the byte sequence. It is only safe
 -- to call this on a 'Bytes' backed by a pinned @ByteArray@.
 contents :: Bytes -> Ptr Word8
+{-# inline contents #-}
 contents (Bytes arr off _) = plusPtr (PM.byteArrayContents arr) off
 
 -- | Convert the sliced 'Bytes' to an unsliced 'ByteArray'. This
@@ -138,6 +143,7 @@ contents (Bytes arr off _) = plusPtr (PM.byteArrayContents arr) off
 -- implies that all of the bytes are used and they are already pinned.
 -- Otherwise, it makes a copy.
 toPinnedByteArray :: Bytes -> ByteArray
+{-# inline toPinnedByteArray #-}
 toPinnedByteArray b@(Bytes arr off len)
   | off == 0, PM.sizeofByteArray arr == len, PM.isByteArrayPinned arr = arr
   | otherwise = toPinnedByteArrayClone b
