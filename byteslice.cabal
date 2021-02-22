@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name: byteslice
-version: 0.2.5.0
+version: 0.2.5.1
 synopsis: Slicing managed and unmanaged memory
 description:
   This library provides types that allow the user to talk about a slice of
@@ -28,7 +28,6 @@ library
     Data.Bytes.Mutable
     Data.Bytes.Types
   other-modules:
-    Data.Bytes.Compat
     Data.Bytes.Byte
     Data.Bytes.Pure
     Data.Bytes.IO

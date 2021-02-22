@@ -141,7 +141,6 @@ import Control.Monad.ST (ST)
 import Control.Monad.ST.Run (runByteArrayST)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
-import Data.Bytes.Compat (cstringLength#)
 import Data.Bytes.Pure (length,fromByteArray)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Char (ord)
@@ -152,6 +151,7 @@ import GHC.Exts (Int(I#),Char(C#),Ptr(Ptr),word2Int#,chr#)
 import GHC.Exts (Addr#,Word#,Int#)
 import GHC.IO (unsafeIOToST)
 import GHC.Word (Word8(W8#))
+import UnliftedBytes (cstringLength#)
 
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Unsafe as ByteString

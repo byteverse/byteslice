@@ -1,5 +1,9 @@
 # Revision history for byteslice
 
+## 0.2.5.1 -- 2021-02-22
+
+* Compatibility with GHC 9.0.
+
 ## 0.2.5.0 -- 2021-01-22
 
 * Add `Data.Bytes.Chunks.concatByteString`.
