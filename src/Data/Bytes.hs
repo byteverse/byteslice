@@ -151,7 +151,7 @@ import GHC.Exts (Int(I#),Char(C#),Ptr(Ptr),word2Int#,chr#)
 import GHC.Exts (Addr#,Word#,Int#)
 import GHC.IO (unsafeIOToST)
 import GHC.Word (Word8(W8#))
-import UnliftedBytes (cstringLength#)
+import Cstrlen (cstringLength#)
 
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Unsafe as ByteString

@@ -1,6 +1,10 @@
 # Revision history for byteslice
 
-## 0.2.5.1 -- 2021-02-22
+## 0.2.5.2 -- 2021-02-23
+
+* Correct compatibility shims.
+
+## 0.2.5.1 -- 2021-02-22 (deprecated)
 
 * Compatibility with GHC 9.0.
 
