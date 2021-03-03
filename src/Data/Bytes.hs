@@ -4,6 +4,7 @@
 {-# language MagicHash #-}
 {-# language NamedFieldPuns #-}
 {-# language RankNTypes #-}
+{-# language TupleSections #-}
 {-# language TypeApplications #-}
 {-# language UnboxedTuples #-}
 
@@ -72,6 +73,7 @@ module Data.Bytes
     -- ** Byte Sequence
   , isPrefixOf
   , isSuffixOf
+  , isInfixOf
   , stripPrefix
   , stripOptionalPrefix
   , stripSuffix
@@ -139,19 +141,21 @@ import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicat
 import Control.Monad.Primitive (PrimMonad,primitive_,unsafeIOToPrim)
 import Control.Monad.ST (ST)
 import Control.Monad.ST.Run (runByteArrayST)
-import Data.ByteString (ByteString)
-import Data.ByteString.Short.Internal (ShortByteString(SBS))
+import Cstrlen (cstringLength#)
+import Data.Bits((.&.),(.|.),shiftL,finiteBitSize)
 import Data.Bytes.Pure (length,fromByteArray)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
+import Data.ByteString (ByteString)
+import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Data.Char (ord)
+import Data.Maybe (fromMaybe)
 import Data.Primitive (ByteArray(ByteArray))
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr,plusPtr,castPtr)
-import GHC.Exts (Int(I#),Char(C#),Ptr(Ptr),word2Int#,chr#)
 import GHC.Exts (Addr#,Word#,Int#)
+import GHC.Exts (Int(I#),Char(C#),Ptr(Ptr),word2Int#,chr#)
 import GHC.IO (unsafeIOToST)
-import GHC.Word (Word8(W8#))
-import Cstrlen (cstringLength#)
+import GHC.Word (Word8(W8#),Word32)
 
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Unsafe as ByteString
@@ -223,6 +227,67 @@ isSuffixOf (Bytes a aOff aLen) (Bytes b bOff bLen) =
   if aLen <= bLen
     then compareByteArrays a aOff b (bOff + bLen - aLen) aLen == EQ
     else False
+
+-- | Is the first argument an infix of the second argument?
+-- 
+-- Uses the Rabin-Karp algorithm: expected time @O(n+m)@, worst-case @O(nm)@.
+isInfixOf :: Bytes -- ^ String to search for
+          -> Bytes -- ^ String to search in
+          -> Bool
+isInfixOf p s = null p || (not . null) (snd $ breakSubstring p s)
+
+breakSubstring :: Bytes -- ^ String to search for
+               -> Bytes -- ^ String to search in
+               -> (Bytes,Bytes) -- ^ Head and tail of string broken at substring
+breakSubstring pat =
+  case lp of
+    0 -> (mempty,)
+    1 -> breakByte (unsafeHead pat)
+    _ -> if lp * 8 <= finiteBitSize (0 :: Word)
+             then shift
+             else karpRabin
+  where
+  unsafeSplitAt i s = (unsafeTake i s, unsafeDrop i s)
+  lp                = length pat
+  {-# INLINE breakByte #-}
+  breakByte b bytes = fromMaybe (mempty,bytes) $ Byte.split1 b bytes
+  {-# INLINE karpRabin #-}
+  karpRabin :: Bytes -> (Bytes, Bytes)
+  karpRabin src
+      | length src < lp = (src,mempty)
+      | otherwise = search (rollingHash $ unsafeTake lp src) lp
+    where
+    k           = 2891336453 :: Word32
+    rollingHash = Pure.foldl' (\h b -> h * k + fromIntegral b) 0
+    hp          = rollingHash pat
+    m           = k ^ lp
+    get = fromIntegral . unsafeIndex src
+    search !hs !i
+        | hp == hs && pat == unsafeTake lp b = u
+        | length src <= i                    = (src,mempty) -- not found
+        | otherwise                          = search hs' (i + 1)
+      where
+      u@(_, b) = unsafeSplitAt (i - lp) src
+      hs' = hs * k +
+            get i -
+            m * get (i - lp)
+  {-# INLINE shift #-}
+  shift :: Bytes -> (Bytes, Bytes)
+  shift !src
+      | length src < lp = (src,mempty)
+      | otherwise       = search (intoWord $ unsafeTake lp src) lp
+    where
+    intoWord :: Bytes -> Word
+    intoWord = Pure.foldl' (\w b -> (w `shiftL` 8) .|. fromIntegral b) 0
+    wp   = intoWord pat
+    mask = (1 `shiftL` (8 * lp)) - 1
+    search !w !i
+        | w == wp         = unsafeSplitAt (i - lp) src
+        | length src <= i = (src, mempty)
+        | otherwise       = search w' (i + 1)
+      where
+      b  = fromIntegral (unsafeIndex src i)
+      w' = mask .&. ((w `shiftL` 8) .|. b)
 
 -- | Find the longest string which is a prefix of both arguments.
 longestCommonPrefix :: Bytes -> Bytes -> Bytes
@@ -348,6 +413,11 @@ dropWhile k b = unsafeDrop (countWhile k b) b
 unsafeIndex :: Bytes -> Int -> Word8
 {-# inline unsafeIndex #-}
 unsafeIndex (Bytes arr off _) ix = PM.indexByteArray arr (off + ix)
+
+-- | Access the first byte. The given 'Bytes' must be non-empty.
+{-# inline unsafeHead #-}
+unsafeHead :: Bytes -> Word8
+unsafeHead bs = unsafeIndex bs 0
 
 -- | /O(n)/ 'dropWhileEnd' @p@ @b@ returns the prefix remaining after
 -- dropping characters that satisfy the predicate @p@ from the end of
