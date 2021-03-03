@@ -56,6 +56,24 @@ tests = testGroup "Bytes"
     , testCase "B" $ THU.assertBool "" $
         not (Bytes.isSuffixOf (bytes "h") (bytes "hey man"))
     ]
+  , testGroup "isInfixOf"
+    [ testCase "small pattern A" $ THU.assertBool "" $
+        Bytes.isInfixOf (bytes "y m") (bytes "hey man")
+    , testCase "small pattern B" $ THU.assertBool "" $
+        Bytes.isInfixOf (bytes "h") (bytes "hey man")
+    , testCase "small pattern C" $ THU.assertBool "" $
+        Bytes.isInfixOf (bytes "an") (bytes "hey man")
+    , testCase "small pattern D" $ THU.assertBool "" $
+        not (Bytes.isInfixOf (bytes "Y M") (bytes "hey man"))
+    , testCase "large pattern A" $ THU.assertBool "" $
+        Bytes.isInfixOf (bytes "Hello, hello!") (bytes "I say hello. Hello, hello! I don't know why you say goodbye, I say hello!")
+    , testCase "large pattern D" $ THU.assertBool "" $
+        not (Bytes.isInfixOf (bytes "Hello, hello!") (bytes "I don't know why you say goodbye, I say hello!"))
+    , testCase "edge: empty pattern" $ THU.assertBool "" $
+        Bytes.isInfixOf (bytes "") (bytes "hello hello!")
+    , testCase "edge: empty string" $ THU.assertBool "" $
+        not (Bytes.isInfixOf (bytes "hello hello!") (bytes ""))
+    ]
   , testGroup "stripOptionalSuffix"
     [ testCase "A" $
         Bytes.fromAsciiString "hey m"
