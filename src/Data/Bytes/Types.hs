@@ -1,4 +1,5 @@
 {-# language BangPatterns #-}
+{-# language DataKinds #-}
 {-# language MagicHash #-}
 {-# language TypeFamilies #-}
 {-# language DuplicateRecordFields #-}
@@ -8,6 +9,8 @@ module Data.Bytes.Types
   , Bytes#(..)
   , MutableBytes(..)
   , UnmanagedBytes(..)
+  , BytesN(..)
+  , ByteArrayN(..)
   ) where
 
 import Control.Monad.ST (runST)
@@ -20,6 +23,7 @@ import Data.Word (Word8)
 import GHC.Base (unsafeChr)
 import GHC.Exts (Int(I#),unsafeCoerce#,sameMutableByteArray#)
 import GHC.Exts (isTrue#,compareByteArrays#,IsList(..))
+import GHC.TypeNats (Nat)
 import UnliftedBytes (Bytes#(..))
 
 import qualified Data.List as L
@@ -31,6 +35,21 @@ data Bytes = Bytes
   { array :: {-# UNPACK #-} !ByteArray
   , offset :: {-# UNPACK #-} !Int
   , length :: {-# UNPACK #-} !Int
+  }
+
+-- | A slice of a 'ByteArray' whose compile-time-known length is represented
+-- by a phantom type variable. Consumers of this data constructor must be
+-- careful to preserve the expected invariant.
+data BytesN (n :: Nat) = BytesN
+  { array :: {-# UNPACK #-} !ByteArray
+  , offset :: {-# UNPACK #-} !Int
+  }
+
+-- | A 'ByteArray' whose compile-time-known length is represented
+-- by a phantom type variable. Consumers of this data constructor must be
+-- careful to preserve the expected invariant.
+newtype ByteArrayN (n :: Nat) = ByteArrayN
+  { array :: ByteArray
   }
 
 -- | A slice of a 'MutableByteArray'.
