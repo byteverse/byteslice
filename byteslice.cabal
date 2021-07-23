@@ -26,7 +26,11 @@ library
     Data.Bytes
     Data.Bytes.Chunks
     Data.Bytes.Mutable
+    Data.Bytes.Text.Ascii
     Data.Bytes.Text.AsciiExt
+    Data.Bytes.Text.Latin1
+    Data.Bytes.Text.Utf8
+    Data.Bytes.Text.Windows1252
     Data.Bytes.Types
   other-modules:
     Data.Bytes.Byte
