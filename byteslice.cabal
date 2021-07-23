@@ -26,6 +26,7 @@ library
     Data.Bytes
     Data.Bytes.Chunks
     Data.Bytes.Mutable
+    Data.Bytes.Text.AsciiExt
     Data.Bytes.Types
   other-modules:
     Data.Bytes.Byte
