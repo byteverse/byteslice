@@ -22,12 +22,12 @@ import qualified GHC.Exts as Exts
 import qualified Data.Primitive as PM
 
 -- | Read 'Bytes' directly from the specified 'Handle'. The resulting
--- 'Bytes' are pinned. This is implemented with 'hGetBuf'.
+-- 'Bytes' are pinned. This is implemented with 'IO.hGetBuf'.
 hGet :: Handle -> Int -> IO Bytes
 hGet h i = createPinnedAndTrim i (\p -> IO.hGetBuf h p i)
 
 -- | Outputs 'Bytes' to the specified 'Handle'. This is implemented
--- with 'hPutBuf'.
+-- with 'IO.hPutBuf'.
 hPut :: Handle -> Bytes -> IO ()
 hPut h b0 = do
   let b1@(Bytes arr _ len) = pin b0
@@ -52,4 +52,3 @@ touchMutableByteArrayIO (PM.MutableByteArray x) =
 touchByteArrayIO :: ByteArray -> IO ()
 touchByteArrayIO (ByteArray x) =
   IO (\s -> (# Exts.touch# x s, () #))
-
