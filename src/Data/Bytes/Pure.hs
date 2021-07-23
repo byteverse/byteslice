@@ -18,26 +18,35 @@ module Data.Bytes.Pure
   , toPinnedByteArrayClone
   , fromByteArray
   , length
+  , foldl
   , foldl'
+  , foldr
+  , ifoldl'
+  , foldr'
   , fnv1a32
   , fnv1a64
   , toByteString
   , pinnedToByteString
+  , fromByteString
   ) where
 
-import Prelude hiding (length)
+import Prelude hiding (length,foldl,foldr)
 
 import Control.Monad.Primitive (PrimState,PrimMonad)
 import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bits (xor)
-import Data.ByteString (ByteString)
 import Data.Bytes.Types (Bytes(Bytes))
+import Data.ByteString (ByteString)
 import Data.Primitive (ByteArray,MutableByteArray)
 import Data.Word (Word64,Word32,Word8)
 import Foreign.Ptr (Ptr,plusPtr)
+import GHC.IO (unsafeIOToST)
 
+import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Internal as ByteString
+import qualified Data.ByteString.Unsafe as ByteString
 import qualified Data.Primitive as PM
+import qualified Data.Primitive.Ptr as PM
 import qualified GHC.Exts as Exts
 import qualified GHC.ForeignPtr as ForeignPtr
 
@@ -124,6 +133,16 @@ fnv1a64 !b = foldl'
   (\acc w -> (fromIntegral @Word8 @Word64 w `xor` acc) * 0x00000100000001B3
   ) 0xcbf29ce484222325 b
 
+-- | Left fold over bytes, non-strict in the accumulator.
+foldl :: (a -> Word8 -> a) -> a -> Bytes -> a
+{-# inline foldl #-}
+foldl f a0 (Bytes arr off0 len0) =
+  go (off0 + len0 - 1) (len0 - 1) 
+  where
+  go !off !ix = case ix of
+    (-1) -> a0
+    _ -> f (go (off - 1) (ix - 1)) (PM.indexByteArray arr off)
+
 -- | Left fold over bytes, strict in the accumulator.
 foldl' :: (a -> Word8 -> a) -> a -> Bytes -> a
 {-# inline foldl' #-}
@@ -131,6 +150,34 @@ foldl' f a0 (Bytes arr off0 len0) = go a0 off0 len0 where
   go !a !off !len = case len of
     0 -> a
     _ -> go (f a (PM.indexByteArray arr off)) (off + 1) (len - 1)
+
+-- | Right fold over bytes, non-strict in the accumulator.
+foldr :: (Word8 -> a -> a) -> a -> Bytes -> a
+{-# inline foldr #-}
+foldr f a0 (Bytes arr off0 len0) = go off0 len0 where
+  go !off !len = case len of
+    0 -> a0
+    _ -> f (PM.indexByteArray arr off) (go (off + 1) (len - 1))
+
+-- | Left fold over bytes, strict in the accumulator. The reduction function
+-- is applied to each element along with its index.
+ifoldl' :: (a -> Int -> Word8 -> a) -> a -> Bytes -> a
+{-# inline ifoldl' #-}
+ifoldl' f a0 (Bytes arr off0 len0) = go a0 0 off0 len0 where
+  go !a !ix !off !len = case len of
+    0 -> a
+    _ -> go (f a ix (PM.indexByteArray arr off)) (ix + 1) (off + 1) (len - 1)
+
+-- | Right fold over bytes, strict in the accumulator.
+foldr' :: (Word8 -> a -> a) -> a -> Bytes -> a
+{-# inline foldr' #-}
+foldr' f a0 (Bytes arr off0 len0) =
+  go a0 (off0 + len0 - 1) (len0 - 1) 
+  where
+  go !a !off !ix = case ix of
+    (-1) -> a
+    _ -> go (f (PM.indexByteArray arr off) a) (off - 1) (ix - 1)
+
 
 -- | Yields a pointer to the beginning of the byte sequence. It is only safe
 -- to call this on a 'Bytes' backed by a pinned @ByteArray@.
@@ -172,3 +219,15 @@ pinnedToByteString (Bytes y@(PM.ByteArray x) off len) =
       (ForeignPtr.PlainPtr (Exts.unsafeCoerce# x))
     )
     0 len
+
+-- | /O(n)/ Copy a 'ByteString' to a byte sequence.
+fromByteString :: ByteString -> Bytes
+fromByteString !b = Bytes
+  ( runByteArrayST $ unsafeIOToST $ do 
+      dst@(PM.MutableByteArray dst# ) <- PM.newByteArray len
+      ByteString.unsafeUseAsCString b $ \src -> do
+        PM.copyPtrToMutablePrimArray (PM.MutablePrimArray dst# ) 0 src len
+      PM.unsafeFreezeByteArray dst
+  ) 0 len
+  where
+  !len = ByteString.length b

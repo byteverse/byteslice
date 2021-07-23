@@ -48,12 +48,12 @@ module Data.Bytes
   , takeWhileEnd
   , dropWhileEnd
     -- * Folds
-  , foldl
+  , Pure.foldl
   , Pure.foldl'
-  , foldr
-  , foldr'
+  , Pure.foldr
+  , Pure.foldr'
     -- * Folds with Indices
-  , ifoldl'
+  , Pure.ifoldl'
     -- * Common Folds
   , elem
     -- * Splitting
@@ -132,7 +132,7 @@ module Data.Bytes
   , fromCString#
   , Pure.toByteString
   , Pure.pinnedToByteString
-  , fromByteString
+  , Pure.fromByteString
   , fromShortByteString
   , toShortByteString
   , toShortByteStringClone
@@ -146,30 +146,27 @@ module Data.Bytes
 import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicate,any,all,readFile)
 
 import Control.Monad.Primitive (PrimMonad,primitive_,unsafeIOToPrim)
-import Control.Monad.ST (ST)
 import Control.Monad.ST.Run (runByteArrayST)
 import Cstrlen (cstringLength#)
 import Data.Bits((.&.),(.|.),shiftL,finiteBitSize)
-import Data.Bytes.Pure (length,fromByteArray)
+import Data.Bytes.Pure (length,fromByteArray,foldr)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
-import Data.ByteString (ByteString)
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
-import Data.Char (ord)
 import Data.Maybe (fromMaybe)
 import Data.Primitive (ByteArray(ByteArray))
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr,plusPtr,castPtr)
 import GHC.Exts (Addr#,Word#,Int#)
-import GHC.Exts (Int(I#),Char(C#),Ptr(Ptr),word2Int#,chr#)
-import GHC.IO (unsafeIOToST)
+import GHC.Exts (Int(I#),Ptr(Ptr))
 import GHC.Word (Word8(W8#),Word32)
 
-import qualified Data.ByteString as ByteString
-import qualified Data.ByteString.Unsafe as ByteString
 import qualified Data.Bytes.Byte as Byte
 import qualified Data.Bytes.Chunks as Chunks
 import qualified Data.Bytes.IO as BIO
 import qualified Data.Bytes.Pure as Pure
+import qualified Data.Bytes.Text.Ascii as Ascii
+import qualified Data.Bytes.Text.AsciiExt as AsciiExt
+import qualified Data.Bytes.Text.Latin1 as Latin1
 import qualified Data.Bytes.Types as Types
 import qualified Data.Foldable as F
 import qualified Data.List as List
@@ -477,61 +474,27 @@ countWhileEnd k (Bytes arr off0 len0) = go (off0 + len0 - 1) (len0 - 1) 0 where
       else n
     else n
 
--- | Left fold over bytes, non-strict in the accumulator.
-foldl :: (a -> Word8 -> a) -> a -> Bytes -> a
-{-# inline foldl #-}
-foldl f a0 (Bytes arr off0 len0) =
-  go (off0 + len0 - 1) (len0 - 1) 
-  where
-  go !off !ix = case ix of
-    (-1) -> a0
-    _ -> f (go (off - 1) (ix - 1)) (PM.indexByteArray arr off)
-
--- | Right fold over bytes, non-strict in the accumulator.
-foldr :: (Word8 -> a -> a) -> a -> Bytes -> a
-{-# inline foldr #-}
-foldr f a0 (Bytes arr off0 len0) = go off0 len0 where
-  go !off !len = case len of
-    0 -> a0
-    _ -> f (PM.indexByteArray arr off) (go (off + 1) (len - 1))
-
--- | Left fold over bytes, strict in the accumulator. The reduction function
--- is applied to each element along with its index.
-ifoldl' :: (a -> Int -> Word8 -> a) -> a -> Bytes -> a
-{-# inline ifoldl' #-}
-ifoldl' f a0 (Bytes arr off0 len0) = go a0 0 off0 len0 where
-  go !a !ix !off !len = case len of
-    0 -> a
-    _ -> go (f a ix (PM.indexByteArray arr off)) (ix + 1) (off + 1) (len - 1)
-
--- | Right fold over bytes, strict in the accumulator.
-foldr' :: (Word8 -> a -> a) -> a -> Bytes -> a
-{-# inline foldr' #-}
-foldr' f a0 (Bytes arr off0 len0) =
-  go a0 (off0 + len0 - 1) (len0 - 1) 
-  where
-  go !a !off !ix = case ix of
-    (-1) -> a
-    _ -> go (f (PM.indexByteArray arr off) a) (off - 1) (ix - 1)
-
 -- | Convert a 'String' consisting of only characters in the ASCII block
 -- to a byte sequence. Any character with a codepoint above @U+007F@ is
 -- replaced by @U+0000@.
 fromAsciiString :: String -> Bytes
-fromAsciiString = fromByteArray
-  . Exts.fromList
-  . map (\c -> let i = ord c in if i < 128 then fromIntegral @Int @Word8 i else 0)
+{-# DEPRECATED fromAsciiString "use Data.Bytes.Ascii.fromString instead" #-}
+{-# INLINE fromAsciiString #-}
+fromAsciiString = Ascii.fromString
 
 -- | Convert a 'String' consisting of only characters representable
 -- by ISO-8859-1. These are encoded with ISO-8859-1. Any character
 -- with a codepoint above @U+00FF@ is replaced by an unspecified byte.
 fromLatinString :: String -> Bytes
-fromLatinString =
-  fromByteArray . Exts.fromList . map (fromIntegral @Int @Word8 . ord)
+{-# DEPRECATED fromLatinString "use Data.Bytes.Latin1.fromString instead" #-}
+{-# INLINE fromLatinString #-}
+fromLatinString = Latin1.fromString
 
 -- | Interpret a byte sequence as text encoded by ISO-8859-1.
 toLatinString :: Bytes -> String
-toLatinString = foldr (\(W8# w) xs -> C# (chr# (word2Int# w)) : xs) []
+{-# DEPRECATED toLatinString "use Data.Bytes.Latin1.toString instead" #-}
+{-# INLINE toLatinString #-}
+toLatinString = Latin1.toString
 
 -- | Copy a primitive string literal into managed memory.
 fromCString# :: Addr# -> Bytes
@@ -553,153 +516,87 @@ compareByteArrays (ByteArray ba1#) (I# off1#) (ByteArray ba2#) (I# off2#) (I# n#
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- a singleton whose element matches the character?
 equalsLatin1 :: Char -> Bytes -> Bool
-{-# inline equalsLatin1 #-}
-equalsLatin1 !c0 (Bytes arr off len) = case len of
-  1 -> c0 == indexCharArray arr off
-  _ -> False
+{-# DEPRECATED equalsLatin1 "use Data.Bytes.Text.Latin1.equals1 instead" #-}
+{-# INLINE equalsLatin1 #-}
+equalsLatin1 = Latin1.equals1
+
 
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- a doubleton whose elements match the characters?
 equalsLatin2 :: Char -> Char -> Bytes -> Bool
-equalsLatin2 !c0 !c1 (Bytes arr off len) = case len of
-  2 -> c0 == indexCharArray arr off &&
-       c1 == indexCharArray arr (off + 1)
-  _ -> False
+{-# DEPRECATED equalsLatin2 "use Data.Bytes.Text.Latin1.equals2 instead" #-}
+{-# INLINE equalsLatin2 #-}
+equalsLatin2 = Latin1.equals2
 
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- a tripleton whose elements match the characters?
 equalsLatin3 :: Char -> Char -> Char -> Bytes -> Bool
-equalsLatin3 !c0 !c1 !c2 (Bytes arr off len) = case len of
-  3 -> c0 == indexCharArray arr off &&
-       c1 == indexCharArray arr (off + 1) &&
-       c2 == indexCharArray arr (off + 2)
-  _ -> False
+{-# DEPRECATED equalsLatin3 "use Data.Bytes.Text.Latin1.equals3 instead" #-}
+{-# INLINE equalsLatin3 #-}
+equalsLatin3 = Latin1.equals3
 
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- a quadrupleton whose elements match the characters?
 equalsLatin4 :: Char -> Char -> Char -> Char -> Bytes -> Bool
-equalsLatin4 !c0 !c1 !c2 !c3 (Bytes arr off len) = case len of
-  4 -> c0 == indexCharArray arr off &&
-       c1 == indexCharArray arr (off + 1) &&
-       c2 == indexCharArray arr (off + 2) &&
-       c3 == indexCharArray arr (off + 3)
-  _ -> False
+{-# DEPRECATED equalsLatin4 "use Data.Bytes.Text.Latin1.equals4 instead" #-}
+{-# INLINE equalsLatin4 #-}
+equalsLatin4 = Latin1.equals4
 
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- a quintupleton whose elements match the characters?
 equalsLatin5 :: Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
-equalsLatin5 !c0 !c1 !c2 !c3 !c4 (Bytes arr off len) = case len of
-  5 -> c0 == indexCharArray arr off &&
-       c1 == indexCharArray arr (off + 1) &&
-       c2 == indexCharArray arr (off + 2) &&
-       c3 == indexCharArray arr (off + 3) &&
-       c4 == indexCharArray arr (off + 4)
-  _ -> False
+{-# DEPRECATED equalsLatin5 "use Data.Bytes.Text.Latin1.equals5 instead" #-}
+{-# INLINE equalsLatin5 #-}
+equalsLatin5 = Latin1.equals5
 
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- a sextupleton whose elements match the characters?
 equalsLatin6 :: Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
-equalsLatin6 !c0 !c1 !c2 !c3 !c4 !c5 (Bytes arr off len) = case len of
-  6 -> c0 == indexCharArray arr off &&
-       c1 == indexCharArray arr (off + 1) &&
-       c2 == indexCharArray arr (off + 2) &&
-       c3 == indexCharArray arr (off + 3) &&
-       c4 == indexCharArray arr (off + 4) &&
-       c5 == indexCharArray arr (off + 5)
-  _ -> False
+{-# DEPRECATED equalsLatin6 "use Data.Bytes.Text.Latin1.equals6 instead" #-}
+{-# INLINE equalsLatin6 #-}
+equalsLatin6 = Latin1.equals6
 
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- a septupleton whose elements match the characters?
 equalsLatin7 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
-equalsLatin7 !c0 !c1 !c2 !c3 !c4 !c5 !c6 (Bytes arr off len) = case len of
-  7 -> c0 == indexCharArray arr off &&
-       c1 == indexCharArray arr (off + 1) &&
-       c2 == indexCharArray arr (off + 2) &&
-       c3 == indexCharArray arr (off + 3) &&
-       c4 == indexCharArray arr (off + 4) &&
-       c5 == indexCharArray arr (off + 5) &&
-       c6 == indexCharArray arr (off + 6)
-  _ -> False
+{-# DEPRECATED equalsLatin7 "use Data.Bytes.Text.Latin1.equals7 instead" #-}
+{-# INLINE equalsLatin7 #-}
+equalsLatin7 = Latin1.equals7
 
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- an octupleton whose elements match the characters?
 equalsLatin8 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
-equalsLatin8 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 (Bytes arr off len) = case len of
-  8 -> c0 == indexCharArray arr off &&
-       c1 == indexCharArray arr (off + 1) &&
-       c2 == indexCharArray arr (off + 2) &&
-       c3 == indexCharArray arr (off + 3) &&
-       c4 == indexCharArray arr (off + 4) &&
-       c5 == indexCharArray arr (off + 5) &&
-       c6 == indexCharArray arr (off + 6) &&
-       c7 == indexCharArray arr (off + 7)
-  _ -> False
+{-# DEPRECATED equalsLatin8 "use Data.Bytes.Text.Latin1.equals8 instead" #-}
+{-# INLINE equalsLatin8 #-}
+equalsLatin8 = Latin1.equals8
 
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- a 9-tuple whose elements match the characters?
 equalsLatin9 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
-equalsLatin9 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 (Bytes arr off len) = case len of
-  9 -> c0 == indexCharArray arr off &&
-       c1 == indexCharArray arr (off + 1) &&
-       c2 == indexCharArray arr (off + 2) &&
-       c3 == indexCharArray arr (off + 3) &&
-       c4 == indexCharArray arr (off + 4) &&
-       c5 == indexCharArray arr (off + 5) &&
-       c6 == indexCharArray arr (off + 6) &&
-       c7 == indexCharArray arr (off + 7) &&
-       c8 == indexCharArray arr (off + 8)
-  _ -> False
+{-# DEPRECATED equalsLatin9 "use Data.Bytes.Text.Latin1.equals9 instead" #-}
+{-# INLINE equalsLatin9 #-}
+equalsLatin9 = Latin1.equals9
 
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- a 10-tuple whose elements match the characters?
 equalsLatin10 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
-equalsLatin10 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 !c9 (Bytes arr off len) = case len of
-  10 -> c0 == indexCharArray arr off &&
-        c1 == indexCharArray arr (off + 1) &&
-        c2 == indexCharArray arr (off + 2) &&
-        c3 == indexCharArray arr (off + 3) &&
-        c4 == indexCharArray arr (off + 4) &&
-        c5 == indexCharArray arr (off + 5) &&
-        c6 == indexCharArray arr (off + 6) &&
-        c7 == indexCharArray arr (off + 7) &&
-        c8 == indexCharArray arr (off + 8) &&
-        c9 == indexCharArray arr (off + 9)
-  _ -> False
+{-# DEPRECATED equalsLatin10 "use Data.Bytes.Text.Latin1.equals10 instead" #-}
+{-# INLINE equalsLatin10 #-}
+equalsLatin10 = Latin1.equals10
 
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- a 11-tuple whose elements match the characters?
 equalsLatin11 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
-equalsLatin11 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 !c9 !c10 (Bytes arr off len) = case len of
-  11 -> c0 == indexCharArray arr off &&
-        c1 == indexCharArray arr (off + 1) &&
-        c2 == indexCharArray arr (off + 2) &&
-        c3 == indexCharArray arr (off + 3) &&
-        c4 == indexCharArray arr (off + 4) &&
-        c5 == indexCharArray arr (off + 5) &&
-        c6 == indexCharArray arr (off + 6) &&
-        c7 == indexCharArray arr (off + 7) &&
-        c8 == indexCharArray arr (off + 8) &&
-        c9 == indexCharArray arr (off + 9) &&
-        c10 == indexCharArray arr (off + 10)
-  _ -> False
+{-# DEPRECATED equalsLatin11 "use Data.Bytes.Text.Latin1.equals11 instead" #-}
+{-# INLINE equalsLatin11 #-}
+equalsLatin11 = Latin1.equals11
 
 -- | Is the byte sequence, when interpreted as ISO-8859-1-encoded text,
 -- a 12-tuple whose elements match the characters?
 equalsLatin12 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
-equalsLatin12 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 !c9 !c10 !c11 (Bytes arr off len) = case len of
-  12 -> c0 == indexCharArray arr off &&
-        c1 == indexCharArray arr (off + 1) &&
-        c2 == indexCharArray arr (off + 2) &&
-        c3 == indexCharArray arr (off + 3) &&
-        c4 == indexCharArray arr (off + 4) &&
-        c5 == indexCharArray arr (off + 5) &&
-        c6 == indexCharArray arr (off + 6) &&
-        c7 == indexCharArray arr (off + 7) &&
-        c8 == indexCharArray arr (off + 8) &&
-        c9 == indexCharArray arr (off + 9) &&
-        c10 == indexCharArray arr (off + 10) &&
-        c11 == indexCharArray arr (off + 11)
-  _ -> False
+{-# DEPRECATED equalsLatin12 "use Data.Bytes.Text.Latin1.equals12 instead" #-}
+{-# INLINE equalsLatin12 #-}
+equalsLatin12 = Latin1.equals12
 
 -- | Is the byte sequence equal to the @NUL@-terminated C String?
 -- The C string must be a constant.
@@ -731,9 +628,6 @@ stripCStringPrefix !ptr0 (Bytes arr off0 len0) = go (castPtr ptr0 :: Ptr Word8) 
 touch :: PrimMonad m => Bytes -> m ()
 touch (Bytes (ByteArray arr) _ _) = unsafeIOToPrim
   (primitive_ (\s -> Exts.touch# arr s))
-
-indexCharArray :: ByteArray -> Int -> Char
-indexCharArray (ByteArray arr) (I# off) = C# (Exts.indexCharArray# arr off)
 
 -- | Read an entire file strictly into a 'Bytes'.
 readFile :: FilePath -> IO Bytes
@@ -817,33 +711,6 @@ fromShortByteString (SBS x) = fromByteArray (ByteArray x)
 -- @[0x41,0x5A]@ and leaves all other bytes alone. Unconditionally
 -- copies the bytes.
 toLowerAsciiByteArrayClone :: Bytes -> ByteArray
-toLowerAsciiByteArrayClone (Bytes src off0 len0) =
-  runByteArrayST action
-  where
-  action :: forall s. ST s ByteArray
-  action = do
-    dst <- PM.newByteArray len0
-    let go !off !ix !len = if len == 0
-          then pure ()
-          else do
-            let w = PM.indexByteArray src off :: Word8
-                w' = if w >= 0x41 && w <= 0x5A
-                  then w + 32
-                  else w
-            PM.writeByteArray dst ix w'
-            go (off + 1) (ix + 1) (len - 1)
-    go off0 0 len0
-    PM.unsafeFreezeByteArray dst
-
-
--- | /O(n)/ Copy a 'ByteString' to a byte sequence.
-fromByteString :: ByteString -> Bytes
-fromByteString !b = Bytes
-  ( runByteArrayST $ unsafeIOToST $ do 
-      dst@(PM.MutableByteArray dst# ) <- PM.newByteArray len
-      ByteString.unsafeUseAsCString b $ \src -> do
-        PM.copyPtrToMutablePrimArray (PM.MutablePrimArray dst# ) 0 src len
-      PM.unsafeFreezeByteArray dst
-  ) 0 len
-  where
-  !len = ByteString.length b
+{-# DEPRECATED toLowerAsciiByteArrayClone "use Data.Bytes/Text/AsciiExt.toLowerU" #-}
+{-# INLINE toLowerAsciiByteArrayClone #-}
+toLowerAsciiByteArrayClone = AsciiExt.toLowerU
