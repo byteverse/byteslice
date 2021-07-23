@@ -8,6 +8,13 @@
 {-# language TypeApplications #-}
 {-# language UnboxedTuples #-}
 
+-- | If you are interested in sub-arrays of 'ByteArray's (e.g. writing a binary
+-- search), it would be grossly inefficient to make a copy of the sub-array. On
+-- the other hand, it'd be really annoying to track limit indices by hand.
+--
+-- This module defines the 'Bytes' type which exposes a standard array interface
+-- for a sub-arrays without copying and without manual index manipulation. --
+-- For mutable arrays, see 'Data.Bytes.Mutable'.
 module Data.Bytes
   ( -- * Types
     Bytes
@@ -719,7 +726,7 @@ stripCStringPrefix !ptr0 (Bytes arr off0 len0) = go (castPtr ptr0 :: Ptr Word8) 
         False -> Nothing
 
 -- | Touch the byte array backing the byte sequence. This sometimes needed
--- after calling 'contents' so that the @ByteArray@ does not get garbage
+-- after calling 'Pure.contents' so that the @ByteArray@ does not get garbage
 -- collected.
 touch :: PrimMonad m => Bytes -> m ()
 touch (Bytes (ByteArray arr) _ _) = unsafeIOToPrim

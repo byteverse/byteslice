@@ -162,7 +162,8 @@ toPinnedByteArrayClone (Bytes arr off len) = runByteArrayST $ do
 toByteString :: Bytes -> ByteString
 toByteString !b = pinnedToByteString (pin b)
 
--- | /O(1)/ Precondition: bytes are pinned. Behavior is undefined otherwise.
+-- | Convert a pinned 'Bytes' to a 'ByteString'
+-- /O(1)/ Precondition: bytes are pinned. Behavior is undefined otherwise.
 pinnedToByteString :: Bytes -> ByteString
 pinnedToByteString (Bytes y@(PM.ByteArray x) off len) =
   ByteString.PS

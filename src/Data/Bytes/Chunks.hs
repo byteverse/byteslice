@@ -290,7 +290,7 @@ fnv1a64 !b = foldl'
   ) 0xcbf29ce484222325 b
 
 -- | Outputs 'Chunks' to the specified 'Handle'. This is implemented
--- with 'hPutBuf'.
+-- with 'IO.hPut'.
 hPut :: Handle -> Chunks -> IO ()
 hPut h = go where
   go ChunksNil = pure ()

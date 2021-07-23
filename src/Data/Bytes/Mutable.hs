@@ -1,6 +1,13 @@
 {-# language BangPatterns #-}
 {-# language LambdaCase #-}
 
+-- | If you are interested in sub-arrays of 'MutableByteArray's (e.g. writing
+-- quicksort), it would be grossly inefficient to make a copy of the sub-array.
+-- On the other hand, it'd be really annoying to track limit indices by hand.
+--
+-- This module defines the 'MutableBytes' type which exposes a standard array
+-- interface for a sub-arrays without copying and without manual index
+-- manipulation. For immutable arrays, see 'Data.Bytes'.
 module Data.Bytes.Mutable
   ( -- * Types
     MutableBytes
