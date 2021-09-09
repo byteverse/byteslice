@@ -141,6 +141,9 @@ module Data.Bytes
   , BIO.hGet
   , readFile
   , BIO.hPut
+    -- * Unlifted Types
+  , lift
+  , unlift
   ) where
 
 import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicate,any,all,readFile)
@@ -159,6 +162,7 @@ import Foreign.Ptr (Ptr,plusPtr,castPtr)
 import GHC.Exts (Addr#,Word#,Int#)
 import GHC.Exts (Int(I#),Ptr(Ptr))
 import GHC.Word (Word8(W8#),Word32)
+import UnliftedBytes (lift,unlift)
 
 import qualified Data.Bytes.Byte as Byte
 import qualified Data.Bytes.Chunks as Chunks

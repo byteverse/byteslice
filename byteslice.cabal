@@ -25,6 +25,7 @@ library
   exposed-modules:
     Data.Bytes
     Data.Bytes.Chunks
+    Data.Bytes.Internal
     Data.Bytes.Mutable
     Data.Bytes.Text.Ascii
     Data.Bytes.Text.AsciiExt
