@@ -20,6 +20,8 @@ import Test.Tasty.QuickCheck ((==>),Arbitrary)
 
 import qualified Data.ByteString as ByteString
 import qualified Data.Bytes as Bytes
+import qualified Data.Bytes.Text.Ascii as Ascii
+import qualified Data.Bytes.Text.AsciiExt as AsciiExt
 import qualified Data.Bytes.Chunks as Chunks
 import qualified Data.Foldable as Foldable
 import qualified Data.List as List
@@ -44,7 +46,7 @@ tests = testGroup "Bytes"
     ]
   , testGroup "isPrefixOf"
     [ testCase "A" $
-        Bytes.toLowerAsciiByteArrayClone (bytes "FooBar")
+        AsciiExt.toLowerU (bytes "FooBar")
         @=?
         pack "foobar"
     , testCase "B" $ THU.assertBool "" $
@@ -76,11 +78,11 @@ tests = testGroup "Bytes"
     ]
   , testGroup "stripOptionalSuffix"
     [ testCase "A" $
-        Bytes.fromAsciiString "hey m"
+        Ascii.fromString "hey m"
         @=?
         Bytes.stripOptionalSuffix (bytes "an") (bytes "hey man")
     , testCase "B" $
-        Bytes.fromAsciiString "hey man"
+        Ascii.fromString "hey man"
         @=?
         Bytes.stripOptionalSuffix (bytes "h") (bytes "hey man")
     ]
@@ -96,17 +98,17 @@ tests = testGroup "Bytes"
     ]
   , testGroup "dropWhileEnd"
     [ testCase "A" $
-        Bytes.fromAsciiString "aabbcc"
+        Ascii.fromString "aabbcc"
         @=?
         Bytes.dropWhileEnd (== c2w 'b') (bytes "aabbccbb")
     ]
   , testGroup "takeWhileEnd"
     [ testCase "A" $
-        Bytes.fromAsciiString "bb"
+        Ascii.fromString "bb"
         @=?
         Bytes.takeWhileEnd (== c2w 'b') (bytes "aabbccbb")
     , testCase "B" $
-        Bytes.fromAsciiString ""
+        Ascii.fromString ""
         @=?
         Bytes.takeWhileEnd (/= c2w '\n') (bytes "aabbccbb\n")
     , testCase "C" $
@@ -165,13 +167,13 @@ tests = testGroup "Bytes"
       ===
       map Bytes.fromByteArray (Exts.toList (Bytes.splitU x (slicedPack xs)))
   , testCase "splitInit-A" $
-      [Bytes.fromAsciiString "hello", Bytes.fromAsciiString "world"]
+      [Ascii.fromString "hello", Ascii.fromString "world"]
       @=?
-      (Bytes.splitInit 0x0A (Bytes.fromAsciiString "hello\nworld\n"))
+      (Bytes.splitInit 0x0A (Ascii.fromString "hello\nworld\n"))
   , testCase "splitInit-B" $
-      [Bytes.fromAsciiString "hello", Bytes.fromAsciiString "world"]
+      [Ascii.fromString "hello", Ascii.fromString "world"]
       @=?
-      (Bytes.splitInit 0x0A (Bytes.fromAsciiString "hello\nworld\nthere"))
+      (Bytes.splitInit 0x0A (Ascii.fromString "hello\nworld\nthere"))
   , testProperty "splitEnd1" $ \(x :: Word8) (xs :: [Word8]) ->
       case ByteString.split x (ByteString.pack xs) of
         [] -> Bytes.splitEnd1 x (slicedPack xs) === Nothing

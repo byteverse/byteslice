@@ -1,5 +1,14 @@
 # Revision history for byteslice
 
+## 0.2.6.0 -- 2021-09-15
+
+* Add `BytesN` and `ByteArrayN`.
+* Add `isInfixOf`.
+* Add `hForLines_` and `hFoldLines`.
+* Add `lift` and `unlift` for converting between `Bytes` and `Bytes#`.
+* Move text-oriented functions from Data.Bytes to `Data.Bytes.Text.*`.
+  Provide aliases with older names that come with deprecation warning.
+
 ## 0.2.5.2 -- 2021-02-23
 
 * Correct compatibility shims.

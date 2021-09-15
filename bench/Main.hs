@@ -2,7 +2,7 @@ import Gauge.Main (defaultMain, bench, whnf)
 
 import Data.Bytes.Types
 import Data.List (permutations)
-import qualified Data.Bytes as Bytes
+import qualified Data.Bytes.Text.Ascii as Ascii
 
 naiveMconcat :: [Bytes] -> Bytes
 naiveMconcat = foldr mappend mempty
@@ -14,4 +14,4 @@ main = defaultMain
   ]
 
 mconcatBytes :: [Bytes]
-mconcatBytes = fmap Bytes.fromAsciiString $ permutations ['a'..'g']
+mconcatBytes = fmap Ascii.fromString $ permutations ['a'..'g']
