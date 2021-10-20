@@ -54,6 +54,9 @@ module Data.Bytes
   , Pure.foldr'
     -- * Folds with Indices
   , Pure.ifoldl'
+    -- * Monadic Folds
+  , Pure.foldlM
+  , Pure.foldrM
     -- * Common Folds
   , elem
     -- * Splitting

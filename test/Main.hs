@@ -17,6 +17,7 @@ import Test.Tasty (defaultMain,testGroup,TestTree)
 import Test.Tasty.HUnit ((@=?),testCase)
 import Test.Tasty.QuickCheck ((===),testProperty,property,Discard(Discard))
 import Test.Tasty.QuickCheck ((==>),Arbitrary)
+import Control.Monad.Trans.Writer (Writer,tell)
 
 import qualified Data.ByteString as ByteString
 import qualified Data.Bytes as Bytes
@@ -124,6 +125,16 @@ tests = testGroup "Bytes"
       List.foldl (-) 0 xs
       ===
       Bytes.foldl (-) 0 (Bytes.unsafeDrop 1 (Exts.fromList (x : xs)))
+  , testProperty "foldlM" $ \(x :: Word8) (xs :: [Word8]) ->
+      let f acc y = (tell [x] >> pure (acc - y)) :: Writer [Word8] Word8 in
+      Foldable.foldlM f 0 xs
+      ===
+      Bytes.foldlM f 0 (Bytes.unsafeDrop 1 (Exts.fromList (x : xs)))
+  , testProperty "foldrM" $ \(x :: Word8) (xs :: [Word8]) ->
+      let f acc y = (tell [x] >> pure (acc - y)) :: Writer [Word8] Word8 in
+      Foldable.foldrM f 0 xs
+      ===
+      Bytes.foldrM f 0 (Bytes.unsafeDrop 1 (Exts.fromList (x : xs)))
   , testProperty "foldl'" $ \(x :: Word8) (xs :: [Word8]) ->
       List.foldl' (-) 0 xs
       ===

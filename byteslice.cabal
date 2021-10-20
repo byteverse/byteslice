@@ -1,6 +1,6 @@
 cabal-version: 2.4
 name: byteslice
-version: 0.2.6.0
+version: 0.2.7.0
 synopsis: Slicing managed and unmanaged memory
 description:
   This library provides types that allow the user to talk about a slice of
@@ -82,6 +82,7 @@ test-suite test
     , tasty
     , tasty-hunit
     , tasty-quickcheck
+    , transformers
 
 benchmark bench
   type: exitcode-stdio-1.0

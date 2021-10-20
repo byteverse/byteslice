@@ -1,5 +1,9 @@
 # Revision history for byteslice
 
+## 0.2.7.0 -- 2021-??-??
+
+* Add `foldlM` and `foldrM` for mondic folds over byte sequences.
+
 ## 0.2.6.0 -- 2021-09-15
 
 * Add `BytesN` and `ByteArrayN`.

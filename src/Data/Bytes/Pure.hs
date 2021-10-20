@@ -18,6 +18,8 @@ module Data.Bytes.Pure
   , toPinnedByteArrayClone
   , fromByteArray
   , length
+  , foldlM
+  , foldrM
   , foldl
   , foldl'
   , foldr
@@ -151,6 +153,16 @@ foldl' f a0 (Bytes arr off0 len0) = go a0 off0 len0 where
     0 -> a
     _ -> go (f a (PM.indexByteArray arr off)) (off + 1) (len - 1)
 
+-- | Left monadic fold over bytes, non-strict in the accumulator.
+foldlM :: Monad m => (a -> Word8 -> m a) -> a -> Bytes -> m a
+{-# inline foldlM #-}
+foldlM f a0 (Bytes arr off0 len0) = go a0 off0 len0 where
+  go a !off !len = case len of
+    0 -> pure a
+    _ -> do
+      a' <- f a (PM.indexByteArray arr off)
+      go a' (off + 1) (len - 1)
+
 -- | Right fold over bytes, non-strict in the accumulator.
 foldr :: (Word8 -> a -> a) -> a -> Bytes -> a
 {-# inline foldr #-}
@@ -178,6 +190,17 @@ foldr' f a0 (Bytes arr off0 len0) =
     (-1) -> a
     _ -> go (f (PM.indexByteArray arr off) a) (off - 1) (ix - 1)
 
+-- | Right monadic fold over bytes, non-strict in the accumulator.
+foldrM :: Monad m => (Word8 -> a -> m a) -> a -> Bytes -> m a
+{-# inline foldrM #-}
+foldrM f a0 (Bytes arr off0 len0) =
+  go a0 (off0 + len0 - 1) (len0 - 1) 
+  where
+  go !a !off !ix = case ix of
+    (-1) -> pure a
+    _ -> do
+      a' <- f (PM.indexByteArray arr off) a
+      go a' (off - 1) (ix - 1)
 
 -- | Yields a pointer to the beginning of the byte sequence. It is only safe
 -- to call this on a 'Bytes' backed by a pinned @ByteArray@.
