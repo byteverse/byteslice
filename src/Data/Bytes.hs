@@ -485,7 +485,7 @@ countWhileEnd k (Bytes arr off0 len0) = go (off0 + len0 - 1) (len0 - 1) 0 where
 -- to a byte sequence. Any character with a codepoint above @U+007F@ is
 -- replaced by @U+0000@.
 fromAsciiString :: String -> Bytes
-{-# DEPRECATED fromAsciiString "use Data.Bytes.Ascii.fromString instead" #-}
+{-# DEPRECATED fromAsciiString "use Data.Bytes.Text.Ascii.fromString instead" #-}
 {-# INLINE fromAsciiString #-}
 fromAsciiString = Ascii.fromString
 
@@ -493,13 +493,13 @@ fromAsciiString = Ascii.fromString
 -- by ISO-8859-1. These are encoded with ISO-8859-1. Any character
 -- with a codepoint above @U+00FF@ is replaced by an unspecified byte.
 fromLatinString :: String -> Bytes
-{-# DEPRECATED fromLatinString "use Data.Bytes.Latin1.fromString instead" #-}
+{-# DEPRECATED fromLatinString "use Data.Bytes.Text.Latin1.fromString instead" #-}
 {-# INLINE fromLatinString #-}
 fromLatinString = Latin1.fromString
 
 -- | Interpret a byte sequence as text encoded by ISO-8859-1.
 toLatinString :: Bytes -> String
-{-# DEPRECATED toLatinString "use Data.Bytes.Latin1.toString instead" #-}
+{-# DEPRECATED toLatinString "use Data.Bytes.Text.Latin1.toString instead" #-}
 {-# INLINE toLatinString #-}
 toLatinString = Latin1.toString
 
