@@ -45,7 +45,7 @@ foldLines = hFoldLines stdin
 -- To maintain a running state, see 'hFoldLines'.
 --
 -- Lines are extracted with with 'BC8.hGetLine', which does not document its
--- dectection algorithm. As of writing (bytestring v0.11.1.0), lines are
+-- detection algorithm. As of writing (bytestring v0.11.1.0), lines are
 -- delimited by a single @\n@ character (UNIX-style, as all things should be).
 hForLines_ :: Handle -> (Bytes -> IO a) -> IO ()
 hForLines_ h body = loop
@@ -61,7 +61,7 @@ hForLines_ h body = loop
 -- If you do not need to keep a state, see `hForLines_`.
 --
 -- Lines are extracted with with 'BC8.hGetLine', which does not document its
--- dectection algorithm. As of writing (bytestring v0.11.1.0), lines are
+-- detection algorithm. As of writing (bytestring v0.11.1.0), lines are
 -- delimited by a single @\n@ character (UNIX-style, as all things should be).
 hFoldLines :: Handle -> a -> (a -> Bytes -> IO a) -> IO a
 hFoldLines h z body = loop z
