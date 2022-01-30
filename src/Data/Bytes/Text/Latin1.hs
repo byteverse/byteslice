@@ -37,7 +37,7 @@ module Data.Bytes.Text.Latin1
 import Data.Bytes.Types (Bytes(..))
 import Data.Char (ord)
 import Data.Primitive (ByteArray(ByteArray))
-import GHC.Exts (Int(I#),Char(C#),word2Int#,chr#)
+import GHC.Exts (Int(I#),Char(C#),word2Int#,word8ToWord#,chr#)
 import GHC.Word (Word8(W8#))
 
 import qualified Data.Bytes.Pure as Bytes
@@ -54,7 +54,7 @@ fromString =
 -- | Interpret a byte sequence as text encoded by ISO-8859-1.
 toString :: Bytes -> String
 {-# INLINE toString #-}
-toString = Bytes.foldr (\(W8# w) xs -> C# (chr# (word2Int# w)) : xs) []
+toString = Bytes.foldr (\(W8# w) xs -> C# (chr# (word2Int# (word8ToWord# w))) : xs) []
 
 -- TODO presumably also fromText and fromShortText
 

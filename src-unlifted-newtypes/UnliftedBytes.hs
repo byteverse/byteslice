@@ -14,8 +14,9 @@ module UnliftedBytes
 import Data.Bytes.Internal (Bytes(Bytes))
 import Data.Primitive (ByteArray(ByteArray))
 import GHC.Exts (Int(I#),ByteArray#,Int#,RuntimeRep(..),TYPE)
+import GHC.Types (UnliftedRep)
 
-newtype Bytes# :: TYPE ('TupleRep '[ 'UnliftedRep,'IntRep,'IntRep]) where
+newtype Bytes# :: TYPE ('TupleRep '[ UnliftedRep,'IntRep,'IntRep]) where
   Bytes# :: (# ByteArray#, Int#, Int# #) -> Bytes#
 
 lift :: Bytes# -> Bytes
