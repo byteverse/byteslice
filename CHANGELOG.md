@@ -1,7 +1,9 @@
 # Revision history for byteslice
 
-## 0.2.7.0 -- 2021-??-??
+## 0.2.7.0 -- 2022-02-16
 
+* Add support for GHC 9.2.
+* Drop support for GHC 8.8 and earlier.
 * Add `foldlM` and `foldrM` for mondic folds over byte sequences.
 
 ## 0.2.6.0 -- 2021-09-15
