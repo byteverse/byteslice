@@ -165,7 +165,7 @@ import Foreign.Ptr (Ptr,plusPtr,castPtr)
 import GHC.Exts (Addr#,Word#,Int#)
 import GHC.Exts (Int(I#),Ptr(Ptr))
 import GHC.Word (Word8(W8#),Word32)
-import UnliftedBytes (lift,unlift)
+import Reps (Bytes#(..),word8ToWord#)
 
 import qualified Data.Bytes.Byte as Byte
 import qualified Data.Bytes.Chunks as Chunks
@@ -400,14 +400,14 @@ stripOptionalSuffix !suf !str = if suf `isSuffixOf` str
 
 -- | Is the byte a member of the byte sequence?
 elem :: Word8 -> Bytes -> Bool
-elem (W8# w) b = case elemLoop 0# w b of
+elem (W8# w) b = case elemLoop 0# (word8ToWord# w) b of
   1# -> True
   _ -> False
 
 elemLoop :: Int# -> Word# -> Bytes -> Int#
 elemLoop !r !w (Bytes arr@(ByteArray arr# ) off@(I# off# ) len) = case len of
   0 -> r
-  _ -> elemLoop (Exts.orI# r (Exts.eqWord# w (Exts.indexWord8Array# arr# off# ) )) w (Bytes arr (off + 1) (len - 1))
+  _ -> elemLoop (Exts.orI# r (Exts.eqWord# w (word8ToWord# (Exts.indexWord8Array# arr# off# )) )) w (Bytes arr (off + 1) (len - 1))
 
 -- | Take bytes while the predicate is true.
 takeWhile :: (Word8 -> Bool) -> Bytes -> Bytes
@@ -721,3 +721,12 @@ toLowerAsciiByteArrayClone :: Bytes -> ByteArray
 {-# DEPRECATED toLowerAsciiByteArrayClone "use Data.Bytes/Text/AsciiExt.toLowerU" #-}
 {-# INLINE toLowerAsciiByteArrayClone #-}
 toLowerAsciiByteArrayClone = AsciiExt.toLowerU
+
+lift :: Bytes# -> Bytes
+{-# inline lift #-}
+lift (Bytes# (# arr, off, len #)) = Bytes (ByteArray arr) (I# off) (I# len)
+
+unlift :: Bytes -> Bytes#
+{-# inline unlift #-}
+unlift (Bytes (ByteArray arr) (I# off) (I# len)) =
+  Bytes# (# arr, off, len #)

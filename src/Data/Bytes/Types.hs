@@ -17,7 +17,7 @@ import Data.Bytes.Internal (Bytes(..))
 import Data.Primitive (ByteArray(..),MutableByteArray(..))
 import Data.Primitive.Addr (Addr)
 import GHC.TypeNats (Nat)
-import UnliftedBytes (Bytes#(..))
+import Reps (Bytes#(..))
 
 -- | A slice of a 'ByteArray' whose compile-time-known length is represented
 -- by a phantom type variable. Consumers of this data constructor must be
