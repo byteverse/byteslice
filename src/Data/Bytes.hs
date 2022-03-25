@@ -137,6 +137,7 @@ module Data.Bytes
   , Pure.pinnedToByteString
   , Pure.fromByteString
   , fromShortByteString
+  , fromShortText
   , toShortByteString
   , toShortByteStringClone
   , toLowerAsciiByteArrayClone
@@ -160,6 +161,7 @@ import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Data.Maybe (fromMaybe)
 import Data.Primitive (ByteArray(ByteArray))
+import Data.Text.Short (ShortText)
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr,plusPtr,castPtr)
 import GHC.Exts (Addr#,Word#,Int#)
@@ -179,6 +181,7 @@ import qualified Data.Foldable as F
 import qualified Data.List as List
 import qualified Data.Primitive as PM
 import qualified Data.Primitive.Ptr as PM
+import qualified Data.Text.Short as TS
 import qualified GHC.Exts as Exts
 
 -- | Is the byte sequence empty?
@@ -712,6 +715,13 @@ toShortByteStringClone !b = case Pure.toByteArrayClone b of
 fromShortByteString :: ShortByteString -> Bytes
 {-# inline fromShortByteString #-}
 fromShortByteString (SBS x) = fromByteArray (ByteArray x)
+
+-- | /O(1)/ Create 'Bytes' from a 'ShortText'. This encodes the text as UTF-8.
+-- It is a no-op.
+fromShortText :: ShortText -> Bytes
+{-# inline fromShortText #-}
+fromShortText t = case TS.toShortByteString t of
+  SBS x -> fromByteArray (ByteArray x)
 
 -- | /O(n)/ Interpreting the bytes an ASCII-encoded characters, convert
 -- the string to lowercase. This adds @0x20@ to bytes in the range
