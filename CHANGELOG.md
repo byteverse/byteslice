@@ -1,5 +1,9 @@
 # Revision history for byteslice
 
+## 0.2.7.0 -- 2022-??-??
+
+* Add `Data.Bytes.fromShortText`
+
 ## 0.2.7.0 -- 2022-02-16
 
 * Add support for GHC 9.2.
