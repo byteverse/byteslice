@@ -22,6 +22,7 @@ import Control.Monad.Trans.Writer (Writer,tell)
 import qualified Data.ByteString as ByteString
 import qualified Data.Bytes as Bytes
 import qualified Data.Bytes.Text.Ascii as Ascii
+import qualified Data.Bytes.Text.Latin1 as Latin1
 import qualified Data.Bytes.Text.AsciiExt as AsciiExt
 import qualified Data.Bytes.Chunks as Chunks
 import qualified Data.Foldable as Foldable
@@ -117,6 +118,10 @@ tests = testGroup "Bytes"
         @=?
         Bytes.takeWhileEnd (/= 0x0) (slicedPack [0x1,0x0,0x1,0x2,0x3])
     ]
+  , testProperty "decodeDecWord" $ \(w :: Word) ->
+      Just w
+      ===
+      Latin1.decodeDecWord (Bytes.unsafeDrop 1 (Exts.fromList (0xFF : (Exts.toList (Latin1.fromString (show w))))))
   , testProperty "elem" $ \(x :: Word8) (xs :: [Word8]) ->
       List.elem x xs
       ===

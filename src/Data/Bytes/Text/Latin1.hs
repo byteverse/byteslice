@@ -1,6 +1,8 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UnboxedSums #-}
+{-# LANGUAGE UnboxedTuples #-}
 
 -- | This module treats 'Bytes' data as holding text encoded in ISO-8859-1. This
 -- encoding can only encode codepoints strictly below @U+0100@, but this allows
@@ -19,6 +21,7 @@
 module Data.Bytes.Text.Latin1
   ( toString
   , fromString
+  , decodeDecWord
   -- * Specialized Comparisons
   , equals1
   , equals2
@@ -34,12 +37,16 @@ module Data.Bytes.Text.Latin1
   , equals12
   ) where
 
+import Prelude hiding (length)
+
 import Data.Bytes.Types (Bytes(..))
 import Data.Char (ord,chr)
 import Data.Primitive (ByteArray(ByteArray))
 import Data.Word (Word8)
-import GHC.Exts (Int(I#),Char(C#))
+import GHC.Exts (Int(I#),Char(C#),or#,ltWord#,int2Word#)
+import GHC.Exts (Word(W#),Word#)
 
+import qualified Data.Primitive as PM
 import qualified Data.Bytes.Pure as Bytes
 import qualified GHC.Exts as Exts
 
@@ -212,3 +219,55 @@ equals12 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 !c9 !c10 !c11 (Bytes arr off len) =
 
 indexCharArray :: ByteArray -> Int -> Char
 indexCharArray (ByteArray arr) (I# off) = C# (Exts.indexCharArray# arr off)
+
+-- | Decode machine-sized word from decimal representation. Returns
+-- Nothing on overflow. Allows any number of leading zeros. Trailing
+-- non-digit bytes cause Nothing to be returned.
+decodeDecWord :: Bytes -> Maybe Word
+{-# inline decodeDecWord #-}
+decodeDecWord !b = case decWordStart b of
+  (# (# #) | #) -> Nothing
+  (# | w #) -> Just (W# w)
+
+decWordStart ::
+     Bytes -- Chunk
+  -> (# (# #) | Word# #)
+{-# noinline decWordStart #-}
+decWordStart !chunk0 = if length chunk0 > 0
+  then
+    let !w = fromIntegral @Word8 @Word
+          (PM.indexByteArray (array chunk0) (offset chunk0)) - 48
+     in if w < 10
+          then decWordMore w (Bytes.unsafeDrop 1 chunk0)
+          else (# (# #) | #)
+  else (# (# #) | #)
+  where
+  decWordMore ::
+       Word -- Accumulator
+    -> Bytes -- Chunk
+    -> (# (# #) | Word# #)
+  decWordMore !acc !chunk = let len = length chunk in case len of
+    0 -> (# | unW (fromIntegral acc) #)
+    _ ->
+      let !w = fromIntegral @Word8 @Word
+            (PM.indexByteArray (array chunk) (offset chunk)) - 48
+       in if w < 10
+            then
+              let (overflow,acc') = unsignedPushBase10 acc w
+               in if overflow
+                 then (# (# #) | #)
+                 else decWordMore acc' (Bytes.unsafeDrop 1 chunk)
+            else (# (# #) | #)
+
+unsignedPushBase10 :: Word -> Word -> (Bool,Word)
+{-# inline unsignedPushBase10 #-}
+unsignedPushBase10 (W# a) (W# b) = 
+  let !(# ca, r0 #) = Exts.timesWord2# a 10##
+      !r1 = Exts.plusWord# r0 b
+      !cb = int2Word# (ltWord# r1 r0)
+      !c = ca `or#` cb
+   in (case c of { 0## -> False; _ -> True }, W# r1)
+
+unW :: Word -> Word#
+{-# inline unW #-}
+unW (W# w) = w

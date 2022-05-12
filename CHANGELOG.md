@@ -1,8 +1,10 @@
 # Revision history for byteslice
 
-## 0.2.7.0 -- 2022-??-??
+## 0.2.8.0 -- 2022-??-??
 
 * Add `Data.Bytes.fromShortText`
+* Add `Data.Bytes.fromPrimArray`
+* Add `decodeDecWord`
 
 ## 0.2.7.0 -- 2022-02-16
 

@@ -17,6 +17,7 @@ module Data.Bytes.Pure
   , toPinnedByteArray
   , toPinnedByteArrayClone
   , fromByteArray
+  , fromPrimArray
   , length
   , foldlM
   , foldrM
@@ -30,6 +31,7 @@ module Data.Bytes.Pure
   , toByteString
   , pinnedToByteString
   , fromByteString
+  , unsafeDrop
   ) where
 
 import Prelude hiding (length,foldl,foldr)
@@ -39,7 +41,7 @@ import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bits (xor)
 import Data.Bytes.Types (Bytes(Bytes))
 import Data.ByteString (ByteString)
-import Data.Primitive (ByteArray,MutableByteArray)
+import Data.Primitive (ByteArray(ByteArray),MutableByteArray,PrimArray(PrimArray))
 import Data.Word (Word64,Word32,Word8)
 import Foreign.Ptr (Ptr,plusPtr)
 import GHC.IO (unsafeIOToST)
@@ -117,6 +119,11 @@ unsafeCopy dst dstIx (Bytes src srcIx len) =
 fromByteArray :: ByteArray -> Bytes
 {-# inline fromByteArray #-}
 fromByteArray b = Bytes b 0 (PM.sizeofByteArray b)
+
+-- | Create a slice of 'Bytes' that spans the entire 'PrimArray' of 8-bit words.
+fromPrimArray :: PrimArray Word8 -> Bytes
+{-# inline fromPrimArray #-}
+fromPrimArray p@(PrimArray b) = Bytes (ByteArray b) 0 (PM.sizeofPrimArray p)
 
 -- | The length of a slice of bytes.
 length :: Bytes -> Int
@@ -254,3 +261,10 @@ fromByteString !b = Bytes
   ) 0 len
   where
   !len = ByteString.length b
+
+-- | Drop the first @n@ bytes from the argument. Precondition: @n ≤ len@
+unsafeDrop :: Int -> Bytes -> Bytes
+{-# inline unsafeDrop #-}
+unsafeDrop n (Bytes arr off len) =
+  Bytes arr (off + n) (len - n)
+

@@ -115,7 +115,7 @@ module Data.Bytes
   , Pure.fnv1a64
     -- * Unsafe Slicing
   , unsafeTake
-  , unsafeDrop
+  , Pure.unsafeDrop
   , unsafeIndex
     -- * Copying
   , Pure.unsafeCopy
@@ -131,6 +131,7 @@ module Data.Bytes
   , fromAsciiString
   , fromLatinString
   , Pure.fromByteArray
+  , Pure.fromPrimArray
   , toLatinString
   , fromCString#
   , Pure.toByteString
@@ -156,7 +157,7 @@ import Control.Monad.Primitive (PrimMonad,primitive_,unsafeIOToPrim)
 import Control.Monad.ST.Run (runByteArrayST)
 import Cstrlen (cstringLength#)
 import Data.Bits((.&.),(.|.),shiftL,finiteBitSize)
-import Data.Bytes.Pure (length,fromByteArray,foldr)
+import Data.Bytes.Pure (length,fromByteArray,foldr,unsafeDrop)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Data.Maybe (fromMaybe)
@@ -453,12 +454,6 @@ unsafeTake :: Int -> Bytes -> Bytes
 {-# inline unsafeTake #-}
 unsafeTake n (Bytes arr off _) =
   Bytes arr off n
-
--- | Drop the first @n@ bytes from the argument. Precondition: @n ≤ len@
-unsafeDrop :: Int -> Bytes -> Bytes
-{-# inline unsafeDrop #-}
-unsafeDrop n (Bytes arr off len) =
-  Bytes arr (off + n) (len - n)
 
 -- Internal. The returns the number of bytes that match the
 -- predicate until the first non-match occurs. If all bytes

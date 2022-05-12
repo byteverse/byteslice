@@ -8,11 +8,13 @@
 -- 'Data.Bytes.Text.AsciiExt'.
 module Data.Bytes.Text.Ascii
   ( fromString
+  , decodeDecWord
   ) where
 
 import Data.Bytes.Types (Bytes)
 import Data.Char (ord)
 import Data.Word (Word8)
+import Data.Bytes.Text.Latin1 (decodeDecWord)
 
 import qualified Data.Bytes.Pure as Bytes
 import qualified GHC.Exts as Exts
