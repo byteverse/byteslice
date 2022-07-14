@@ -48,7 +48,7 @@ library
     , run-st >=0.1.1 && <0.2
     , text-short >=0.1.3 && <0.2
     , tuples >=0.1 && <0.2
-    , vector >=0.12 && <0.13
+    , vector >=0.12 && <0.14
   hs-source-dirs: src
   ghc-options: -Wall -O2
   if impl(ghc>=9.2)
