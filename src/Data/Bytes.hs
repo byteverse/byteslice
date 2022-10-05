@@ -77,6 +77,8 @@ module Data.Bytes
     -- * Combining
   , intercalate
   , intercalateByte2
+  , concatArray
+  , concatArrayU
     -- * Counting
   , Byte.count
     -- * Prefix and Suffix
@@ -161,7 +163,7 @@ import Data.Bytes.Pure (length,fromByteArray,foldr,unsafeDrop)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Data.Maybe (fromMaybe)
-import Data.Primitive (ByteArray(ByteArray))
+import Data.Primitive (Array,ByteArray(ByteArray))
 import Data.Text.Short (ShortText)
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr,plusPtr,castPtr)
@@ -735,3 +737,21 @@ unlift :: Bytes -> Bytes#
 {-# inline unlift #-}
 unlift (Bytes (ByteArray arr) (I# off) (I# len)) =
   Bytes# (# arr, off, len #)
+
+concatArrayU :: Array Bytes -> ByteArray
+{-# noinline concatArrayU #-}
+concatArrayU !xs = runByteArrayST $ do
+  let !arrLen = PM.sizeofArray xs
+  let !totalByteLen = F.foldl' (\acc b -> length b + acc) 0 xs
+  dst <- PM.newByteArray totalByteLen
+  let go !ix !dstOff = if ix < arrLen
+        then do
+          x <- PM.indexArrayM xs ix
+          Pure.unsafeCopy dst dstOff x
+          go (ix + 1) (dstOff + length x)
+        else PM.unsafeFreezeByteArray dst
+  go 0 0
+
+concatArray :: Array Bytes -> Bytes
+{-# inline concatArray #-}
+concatArray !xs = Pure.fromByteArray (concatArrayU xs)

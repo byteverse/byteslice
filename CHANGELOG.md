@@ -5,6 +5,7 @@
 * Add `Data.Bytes.fromShortText`
 * Add `Data.Bytes.fromPrimArray`
 * Add `decodeDecWord`
+* Add `concatArray` and `concatArrayU`.
 
 ## 0.2.7.0 -- 2022-02-16
 

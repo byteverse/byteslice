@@ -166,6 +166,10 @@ tests = testGroup "Bytes"
       mconcat (List.intersperse x xs)
       ===
       Bytes.intercalate x xs
+  , testProperty "concatArray" $ \(xs :: [Bytes]) ->
+      mconcat xs
+      ===
+      Bytes.concatArray (Exts.fromList xs)
   , testProperty "splitNonEmpty" $ \(x :: Word8) (xs :: [Word8]) ->
       Bytes.split x (slicedPack xs)
       ===

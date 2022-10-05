@@ -50,7 +50,6 @@ import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Internal as ByteString
 import qualified Data.ByteString.Unsafe as ByteString
 import qualified Data.Primitive as PM
-import qualified Data.Primitive.Ptr as PM
 import qualified GHC.Exts as Exts
 import qualified GHC.ForeignPtr as ForeignPtr
 
