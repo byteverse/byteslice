@@ -2,6 +2,7 @@
 
 ## 0.2.8.0 -- 2022-??-??
 
+* Add `Data.Bytes.replace` and `Data.Bytes.findIndices`
 * Add `Data.Bytes.fromShortText`
 * Add `Data.Bytes.fromPrimArray`
 * Add `decodeDecWord`
