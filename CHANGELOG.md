@@ -1,6 +1,6 @@
 # Revision history for byteslice
 
-## 0.2.8.0 -- 2022-??-??
+## 0.2.8.0 -- 2022-11-21
 
 * Add `Data.Bytes.replace` and `Data.Bytes.findIndices`
 * Add `Data.Bytes.fromShortText`
