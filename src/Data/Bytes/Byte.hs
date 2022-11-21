@@ -11,7 +11,8 @@
 -- on a particular byte and for counting occurences of that
 -- byte.
 module Data.Bytes.Byte
-  ( count
+  ( -- Re-exported by Data.Bytes
+    count
   , split
   , splitU
   , splitNonEmpty
@@ -23,6 +24,8 @@ module Data.Bytes.Byte
   , split3
   , split4
   , splitEnd1
+    -- Used by other internal modules
+  , elemIndexLoop#
   ) where
 
 import Prelude hiding (length)
@@ -273,7 +276,11 @@ split4 w b@(Bytes arr off len) = case elemIndexLoop# w b of
 -- This returns the offset into the byte array. This is not an index
 -- that will mean anything to the end user, so it cannot be returned
 -- to them.
+--
+-- Exported for use in other internal modules because it is needed in
+-- Data.Bytes.Search.
 elemIndexLoop# :: Word8 -> Bytes -> Int#
+{-# inline elemIndexLoop# #-}
 elemIndexLoop# !w (Bytes arr off@(I# off# ) len) = case len of
   0 -> (-1#)
   _ -> if PM.indexByteArray arr off == w

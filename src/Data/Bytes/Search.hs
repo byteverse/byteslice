@@ -22,14 +22,28 @@ import Control.Monad.ST.Run (runByteArrayST,runPrimArrayST)
 import Data.Bits((.&.),(.|.),shiftL,finiteBitSize)
 import Data.Bytes.Pure (length,unsafeIndex,unsafeHead)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
-import Data.Maybe (isJust)
 import Data.Primitive (ByteArray,PrimArray)
+import GHC.Exts (Int(I#))
 import GHC.Word (Word32)
 
 import qualified Data.Bytes.Byte as Byte
 import qualified Data.Bytes.Pure as Pure
 import qualified Data.Bytes.Types as Types
 import qualified Data.Primitive as PM
+
+-- Implementation Notes
+-- =====================
+-- For karp rabin, there are some easy performance improvements
+-- left on the table. The main optimization that has been done is making
+-- sure that there is no unnecessary boxing of Int, Word32, or Bytes
+-- going on. Here are some other things that have not been done:
+--
+-- * The hash is currently a Word32. It would be better to use either
+--   Word or Word64 for this. We would need for hashKey to be different.
+-- * In several places, we track an index into a Bytes. This index gets
+--   repeatedly added to the base offset as we loop over the bytes. We
+--   could instead track the true offset instead of repeatedly
+--   recalculating it.
 
 -- | Replace every non-overlapping occurrence of @needle@ in
 -- @haystack@ with @replacement@.
@@ -122,43 +136,48 @@ findIndicesKarpRabin !ixModifier !hp !pat !haystack !ix0 !len0 = runPrimArrayST 
   let dstLen = 1 + quot len0 (Pure.length pat)
   dst <- PM.newPrimArray dstLen
   let go !ix !len !ixIx = case karpRabin hp pat Bytes{array=haystack,offset=ix,length=len} of
-        Nothing -> do
+        (-1) -> do
           PM.shrinkMutablePrimArray dst ixIx
           PM.unsafeFreezePrimArray dst
-        Just (preMatch,_) -> do
-          let !advancement = Pure.length preMatch
+        skipCount -> do
+          let !advancement = skipCount - Pure.length pat
           let !advancement' = advancement + Pure.length pat
           PM.writePrimArray dst ixIx (ix + advancement + ixModifier)
           let !ix' = ix + advancement'
           go ix' (len - advancement') (ixIx + 1)
   go ix0 len0 0
 
+-- Output: Negative one means match not found. Other negative
+-- numbers should not occur. Zero may occur. Positive number
+-- means the number of bytes to skip to make it past the match.
 breakSubstring :: Bytes -- ^ String to search for
                -> Bytes -- ^ String to search in
-               -> Maybe (Bytes,Bytes) -- ^ Head and tail of string broken at substring
-breakSubstring !pat !haystack =
+               -> Int
+breakSubstring !pat !haystack@(Bytes _ off0 _) =
   case lp of
-    0 -> Just (mempty,haystack)
-    1 -> Byte.split1 (unsafeHead pat) haystack
+    0 -> 0
+    1 -> case Byte.elemIndexLoop# (unsafeHead pat) haystack of
+      (-1#) -> (-1)
+      off -> 1 + (I# off) - off0
     _ -> if lp * 8 <= finiteBitSize (0 :: Word)
-             then shift haystack
-             else karpRabin (rollingHash pat) pat haystack
+      then shift haystack
+      else karpRabin (rollingHash pat) pat haystack
   where
   lp                = length pat
   {-# INLINE shift #-}
-  shift :: Bytes -> Maybe (Bytes, Bytes)
+  shift :: Bytes -> Int
   shift !src
-      | length src < lp = Nothing
+      | length src < lp = (-1)
       | otherwise       = search (intoWord $ Pure.unsafeTake lp src) lp
     where
     intoWord :: Bytes -> Word
     intoWord = Pure.foldl' (\w b -> (w `shiftL` 8) .|. fromIntegral b) 0
     wp   = intoWord pat
     mask = (1 `shiftL` (8 * lp)) - 1
-    search :: Word -> Int -> Maybe (Bytes,Bytes)
+    search :: Word -> Int -> Int
     search !w !i
-        | w == wp         = Just (unsafeSplitAt (i - lp) src)
-        | length src <= i = Nothing
+        | w == wp         = i
+        | length src <= i = (-1)
         | otherwise       = search w' (i + 1)
       where
       b  = fromIntegral (Pure.unsafeIndex src i)
@@ -173,31 +192,30 @@ hashKey :: Word32
 {-# inline hashKey #-}
 hashKey = 2891336453
 
--- Precondition: Length of bytes is greater than or equal to 2.
+-- Precondition: Length of bytes is greater than or equal to 1.
 -- Precondition: Rolling hash agrees with pattern.
-karpRabin :: Word32 -> Bytes -> Bytes -> Maybe (Bytes, Bytes)
+-- Output: Negative one means match not found. Other negative
+-- numbers should not occur. Zero should not occur. Positive number
+-- means the number of bytes to skip to make it past the match.
+karpRabin :: Word32 -> Bytes -> Bytes -> Int
 karpRabin !hp !pat !src
-    | length src < lp = Nothing
+    | length src < lp = (-1)
     | otherwise = search (rollingHash $ Pure.unsafeTake lp src) lp
   where
   lp :: Int
-  lp = Pure.length pat
-  m = hashKey ^ lp
+  !lp = Pure.length pat
+  m :: Word32
+  !m = hashKey ^ lp
   get :: Int -> Word32
-  get = fromIntegral . Pure.unsafeIndex src
+  get !ix = fromIntegral (Pure.unsafeIndex src ix)
   search !hs !i
-      | hp == hs && pat == Pure.unsafeTake lp b = Just u
-      | length src <= i                    = Nothing -- (src,mempty) -- not found
+      | hp == hs && eqBytesNoShortCut pat (Pure.unsafeTake lp (Pure.unsafeDrop (i - lp) src)) = i
+      | length src <= i                    = (-1)
       | otherwise                          = search hs' (i + 1)
     where
-    u@(_, b) = unsafeSplitAt (i - lp) src
     hs' = hs * hashKey +
           get i -
           m * get (i - lp)
-
-unsafeSplitAt :: Int -> Bytes -> (Bytes,Bytes)
-{-# inline unsafeSplitAt #-}
-unsafeSplitAt i s = (Pure.unsafeTake i s, Pure.unsafeDrop i s)
 
 -- | Is the first argument an infix of the second argument?
 -- 
@@ -205,5 +223,12 @@ unsafeSplitAt i s = (Pure.unsafeTake i s, Pure.unsafeDrop i s)
 isInfixOf :: Bytes -- ^ String to search for
           -> Bytes -- ^ String to search in
           -> Bool
-isInfixOf p s = Pure.null p || isJust (breakSubstring p s)
+isInfixOf p s = Pure.null p || breakSubstring p s >= 0
 
+
+-- Precondition: both arguments have the same length
+-- Skips the pointer equality check and the length check.
+eqBytesNoShortCut :: Bytes -> Bytes -> Bool
+{-# inline eqBytesNoShortCut #-}
+eqBytesNoShortCut (Bytes arr1 off1 len1) (Bytes arr2 off2 _) =
+  PM.compareByteArrays arr1 off1 arr2 off2 len1 == EQ
