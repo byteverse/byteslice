@@ -32,9 +32,15 @@ module Data.Bytes.Pure
   , pinnedToByteString
   , fromByteString
   , unsafeDrop
+  , unsafeTake
+  , unsafeIndex
+  , unsafeHead
+  , map
+  , mapU
+  , null
   ) where
 
-import Prelude hiding (length,foldl,foldr)
+import Prelude hiding (length,foldl,foldr,map,null)
 
 import Control.Monad.Primitive (PrimState,PrimMonad)
 import Control.Monad.ST.Run (runByteArrayST)
@@ -267,3 +273,43 @@ unsafeDrop :: Int -> Bytes -> Bytes
 unsafeDrop n (Bytes arr off len) =
   Bytes arr (off + n) (len - n)
 
+-- | Variant of 'map' that returns unsliced byte sequence.
+mapU :: (Word8 -> Word8) -> Bytes -> ByteArray
+{-# inline mapU #-}
+mapU f (Bytes array ix0 len) = runByteArrayST do
+  dst <- PM.newByteArray len
+  let go !srcIx !dstIx = if dstIx < len
+        then do
+          let w = PM.indexByteArray array srcIx :: Word8
+          PM.writeByteArray dst dstIx (f w)
+          go (srcIx + 1) (dstIx + 1)
+        else PM.unsafeFreezeByteArray dst
+  go ix0 0
+
+-- | Map over bytes in a sequence. The result has the same length as
+-- the argument. 
+map :: (Word8 -> Word8) -> Bytes -> Bytes
+{-# inline map #-}
+map f !b = Bytes (mapU f b) 0 (length b)
+
+-- | Is the byte sequence empty?
+null :: Bytes -> Bool
+{-# inline null #-}
+null (Bytes _ _ len) = len == 0
+
+-- | Take the first @n@ bytes from the argument. Precondition: @n ≤ len@
+unsafeTake :: Int -> Bytes -> Bytes
+{-# inline unsafeTake #-}
+unsafeTake n (Bytes arr off _) =
+  Bytes arr off n
+
+-- | Index into the byte sequence at the given position. This index
+-- must be less than the length.
+unsafeIndex :: Bytes -> Int -> Word8
+{-# inline unsafeIndex #-}
+unsafeIndex (Bytes arr off _) ix = PM.indexByteArray arr (off + ix)
+
+-- | Access the first byte. The given 'Bytes' must be non-empty.
+{-# inline unsafeHead #-}
+unsafeHead :: Bytes -> Word8
+unsafeHead bs = unsafeIndex bs 0

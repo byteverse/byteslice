@@ -34,6 +34,7 @@ library
     Data.Bytes.Text.Windows1252
     Data.Bytes.Types
   other-modules:
+    Data.Bytes.Search
     Data.Bytes.Byte
     Data.Bytes.Pure
     Data.Bytes.IO
@@ -83,6 +84,7 @@ test-suite test
     , tasty-hunit
     , tasty-quickcheck
     , transformers
+    , text >=1.2
 
 benchmark bench
   type: exitcode-stdio-1.0

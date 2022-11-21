@@ -17,8 +17,12 @@ import Test.Tasty (defaultMain,testGroup,TestTree)
 import Test.Tasty.HUnit ((@=?),testCase)
 import Test.Tasty.QuickCheck ((===),testProperty,property,Discard(Discard))
 import Test.Tasty.QuickCheck ((==>),Arbitrary)
+import Test.Tasty.QuickCheck (ASCIIString(ASCIIString))
 import Control.Monad.Trans.Writer (Writer,tell)
+import Data.Text (Text)
 
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text.Encoding
 import qualified Data.ByteString as ByteString
 import qualified Data.Bytes as Bytes
 import qualified Data.Bytes.Text.Ascii as Ascii
@@ -77,6 +81,42 @@ tests = testGroup "Bytes"
         Bytes.isInfixOf (bytes "") (bytes "hello hello!")
     , testCase "edge: empty string" $ THU.assertBool "" $
         not (Bytes.isInfixOf (bytes "hello hello!") (bytes ""))
+    ]
+  , testGroup "findIndices"
+    [ testCase "A" $
+        Exts.fromList [4]
+        @=?
+        Bytes.findIndices (Bytes.fromByteArray (pack "greatest showman")) (Bytes.fromByteArray (pack "the greatest showman of all"))
+    , testCase "B" $
+        Exts.fromList [4]
+        @=?
+        Bytes.findIndices (bytes "greatest showman") (bytes "the greatest showman of all")
+    , testCase "C" $
+        Exts.fromList [0,1,2,3,4,5]
+        @=?
+        Bytes.findIndices (bytes "a") (bytes "aaaaaa")
+    , testCase "D" $
+        Exts.fromList [0,2,4]
+        @=?
+        Bytes.findIndices (bytes "aa") (bytes "aaaaaaa")
+    ]
+  , testGroup "replace-spec"
+    [ testCase "A" $
+        Bytes.empty
+        @=?
+        Bytes.replace (Bytes.fromByteArray (pack "hello")) (Bytes.fromByteArray (pack "world")) Bytes.empty
+    , testCase "B" $
+        bytes "xzybbcbbc"
+        @=?
+        Bytes.replace (bytes "a") (bytes "b") (bytes "xzyabcabc")
+    , testCase "C" $
+        bytes "my favorite month is March!"
+        @=?
+        Bytes.replace (bytes "November") (bytes "March") (bytes "my favorite month is November!")
+    , testCase "D" $
+        bytes "Saturn, Saturn, Mars, Saturn"
+        @=?
+        Bytes.replace (bytes "Jupiter") (bytes "Saturn") (bytes "Jupiter, Jupiter, Mars, Jupiter")
     ]
   , testGroup "stripOptionalSuffix"
     [ testCase "A" $
@@ -194,6 +234,21 @@ tests = testGroup "Bytes"
       [Ascii.fromString "hello", Ascii.fromString "world"]
       @=?
       (Bytes.splitInit 0x0A (Ascii.fromString "hello\nworld\nthere"))
+  , testProperty "replace" $ \(ws :: ASCIIString) (xs :: ASCIIString) (ys :: ASCIIString) (zs :: ASCIIString) ->
+      let ws' = asciiStringToBytes ws
+          xs' = asciiStringToBytes xs
+          ys' = asciiStringToBytes ys
+          zs' = asciiStringToBytes zs
+          ws'' = asciiStringToText ws
+          xs'' = asciiStringToText xs
+          ys'' = asciiStringToText ys
+          zs'' = asciiStringToText zs
+       in case ws of
+            ASCIIString [] -> property Discard
+            _ ->
+              Bytes.replace ws' xs' (ys' <> ws' <> zs')
+              ===
+              Bytes.fromByteString (Text.Encoding.encodeUtf8 (Text.replace ws'' xs'' (ys'' <> ws'' <> zs'')))
   , testProperty "splitEnd1" $ \(x :: Word8) (xs :: [Word8]) ->
       case ByteString.split x (ByteString.pack xs) of
         [] -> Bytes.splitEnd1 x (slicedPack xs) === Nothing
@@ -297,3 +352,9 @@ instance Arbitrary Chunks where
 
 lawsToTest :: QCC.Laws -> TestTree
 lawsToTest (QCC.Laws name pairs) = testGroup name (map (uncurry TQC.testProperty) pairs)
+
+asciiStringToBytes :: ASCIIString -> Bytes
+asciiStringToBytes (ASCIIString x) = bytes x
+
+asciiStringToText :: ASCIIString -> Text
+asciiStringToText (ASCIIString x) = Text.pack x
