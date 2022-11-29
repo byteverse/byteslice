@@ -38,6 +38,7 @@ module Data.Bytes.Pure
   , map
   , mapU
   , null
+  , toShortByteString
   ) where
 
 import Prelude hiding (length,foldl,foldr,map,null)
@@ -47,6 +48,7 @@ import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bits (xor)
 import Data.Bytes.Types (Bytes(Bytes))
 import Data.ByteString (ByteString)
+import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Data.Primitive (ByteArray(ByteArray),MutableByteArray,PrimArray(PrimArray))
 import Data.Word (Word64,Word32,Word8)
 import Foreign.Ptr (Ptr,plusPtr)
@@ -313,3 +315,12 @@ unsafeIndex (Bytes arr off _) ix = PM.indexByteArray arr (off + ix)
 {-# inline unsafeHead #-}
 unsafeHead :: Bytes -> Word8
 unsafeHead bs = unsafeIndex bs 0
+
+-- | Convert the sliced 'Bytes' to an unsliced 'ShortByteString'. This
+-- reuses the array backing the sliced 'Bytes' if the slicing metadata
+-- implies that all of the bytes are used. Otherwise, it makes a copy.
+toShortByteString :: Bytes -> ShortByteString
+{-# inline toShortByteString #-}
+toShortByteString !b = case toByteArray b of
+  PM.ByteArray x -> SBS x
+

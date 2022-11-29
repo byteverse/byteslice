@@ -1,5 +1,9 @@
 # Revision history for byteslice
 
+## 0.2.9.0 -- 2022-??-??
+
+* Add `toShortText` and `toShortTextU` to `Data.Byte.Text.Ascii`.
+
 ## 0.2.8.0 -- 2022-11-21
 
 * Add `Data.Bytes.replace` and `Data.Bytes.findIndices`

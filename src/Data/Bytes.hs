@@ -167,7 +167,7 @@ import Control.Monad.ST.Run (runByteArrayST)
 import Cstrlen (cstringLength#)
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Data.Bytes.Pure (length,fromByteArray,foldr,unsafeDrop)
-import Data.Bytes.Pure (unsafeIndex)
+import Data.Bytes.Pure (unsafeIndex,toShortByteString)
 import Data.Bytes.Types (Bytes(Bytes,array,offset))
 import Data.Primitive (Array,ByteArray(ByteArray))
 import Data.Text.Short (ShortText)
@@ -615,14 +615,6 @@ any f = foldr (\b r -> f b || r) False
 all :: (Word8 -> Bool) -> Bytes -> Bool
 {-# inline all #-}
 all f = foldr (\b r -> f b && r) True
-
--- | Convert the sliced 'Bytes' to an unsliced 'ShortByteString'. This
--- reuses the array backing the sliced 'Bytes' if the slicing metadata
--- implies that all of the bytes are used. Otherwise, it makes a copy.
-toShortByteString :: Bytes -> ShortByteString
-{-# inline toShortByteString #-}
-toShortByteString !b = case Pure.toByteArray b of
-  PM.ByteArray x -> SBS x
 
 -- | Variant of 'toShortByteString' that unconditionally makes a copy of
 -- the array backing the sliced 'Bytes' even if the original array

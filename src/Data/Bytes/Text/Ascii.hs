@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | This module treats 'Bytes' data as holding ASCII text. Providing bytes
@@ -9,16 +10,22 @@
 module Data.Bytes.Text.Ascii
   ( fromString
   , decodeDecWord
+  , toShortText
+  , toShortTextU
   ) where
 
+import Data.ByteString.Short.Internal (ShortByteString(SBS))
+import Data.Bytes.Text.Latin1 (decodeDecWord)
 import Data.Bytes.Types (Bytes)
 import Data.Char (ord)
+import Data.Primitive (ByteArray)
+import Data.Text.Short (ShortText)
 import Data.Word (Word8)
-import Data.Bytes.Text.Latin1 (decodeDecWord)
 
 import qualified Data.Bytes.Pure as Bytes
+import qualified Data.Primitive as PM
+import qualified Data.Text.Short.Unsafe as TS
 import qualified GHC.Exts as Exts
-
 
 -- | Convert a 'String' consisting of only characters in the ASCII block
 -- to a byte sequence. Any character with a codepoint above @U+007F@ is
@@ -29,3 +36,15 @@ fromString = Bytes.fromByteArray
   . map (\c -> let i = ord c in if i < 128 then fromIntegral @Int @Word8 i else 0)
 
 -- TODO presumably also fromText and fromShortText
+
+toShortText :: Bytes -> Maybe ShortText
+{-# inline toShortText #-}
+toShortText !b = case Bytes.foldr (\w acc -> w < 128 && acc) True b of
+  True -> Just (TS.fromShortByteStringUnsafe (Bytes.toShortByteString b))
+  False -> Nothing
+
+toShortTextU :: ByteArray -> Maybe ShortText
+{-# inline toShortTextU #-}
+toShortTextU !b = case Bytes.foldr (\w acc -> w < 128 && acc) True (Bytes.fromByteArray b) of
+  True -> Just (TS.fromShortByteStringUnsafe (case b of {PM.ByteArray x -> SBS x}))
+  False -> Nothing
