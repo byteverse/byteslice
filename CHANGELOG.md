@@ -1,6 +1,6 @@
 # Revision history for byteslice
 
-## 0.2.9.0 -- 2022-??-??
+## 0.2.9.0 -- 2022-12-08
 
 * Add `toShortText`, `toShortTextU`, and `toText` to `Data.Byte.Text.Ascii`.
 * Add `fromShortText` and `fromText` to `Data.Bytes.Text.Utf8`.
