@@ -2,8 +2,8 @@
 
 ## 0.2.9.0 -- 2022-??-??
 
-* Add `toShortText` and `toShortTextU` to `Data.Byte.Text.Ascii`.
-* Add `fromShortText` to `Data.Bytes.Text.Utf8`.
+* Add `toShortText`, `toShortTextU`, and `toText` to `Data.Byte.Text.Ascii`.
+* Add `fromShortText` and `fromText` to `Data.Bytes.Text.Utf8`.
 
 ## 0.2.8.0 -- 2022-11-21
 

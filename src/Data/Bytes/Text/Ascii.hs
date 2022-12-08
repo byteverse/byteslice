@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | This module treats 'Bytes' data as holding ASCII text. Providing bytes
@@ -12,18 +13,24 @@ module Data.Bytes.Text.Ascii
   , decodeDecWord
   , toShortText
   , toShortTextU
+#if MIN_VERSION_text(2,0,0)
+  , toText
+#endif
   ) where
 
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Data.Bytes.Text.Latin1 (decodeDecWord)
-import Data.Bytes.Types (Bytes)
+import Data.Bytes.Types (Bytes(Bytes))
 import Data.Char (ord)
 import Data.Primitive (ByteArray)
+import Data.Text (Text)
 import Data.Text.Short (ShortText)
 import Data.Word (Word8)
 
 import qualified Data.Bytes.Pure as Bytes
 import qualified Data.Primitive as PM
+import qualified Data.Text.Array as A
+import qualified Data.Text.Internal as I
 import qualified Data.Text.Short.Unsafe as TS
 import qualified GHC.Exts as Exts
 
@@ -48,3 +55,15 @@ toShortTextU :: ByteArray -> Maybe ShortText
 toShortTextU !b = case Bytes.foldr (\w acc -> w < 128 && acc) True (Bytes.fromByteArray b) of
   True -> Just (TS.fromShortByteStringUnsafe (case b of {PM.ByteArray x -> SBS x}))
   False -> Nothing
+
+#if MIN_VERSION_text(2,0,0)
+-- | Interpret byte sequence as ASCII codepoints.
+-- Only available when building with @text-2.0@ and newer.
+-- Returns 'Nothing' if any of the bytes are outside of the
+-- range @0x00-0x7F@
+toText :: Bytes -> Maybe Text
+{-# inline toText #-}
+toText !b@(Bytes (PM.ByteArray arr) off len) = case Bytes.foldr (\w acc -> w < 128 && acc) True b of
+  True -> Just (I.Text (A.ByteArray arr) off len)
+  False -> Nothing
+#endif
