@@ -1,5 +1,9 @@
 # Revision history for byteslice
 
+## 0.2.10.0 -- 2023-??-??
+
+* Add `equals13`, `equals14`, `equals15`.
+
 ## 0.2.9.0 -- 2022-12-08
 
 * Add `toShortText`, `toShortTextU`, and `toText` to `Data.Byte.Text.Ascii`.

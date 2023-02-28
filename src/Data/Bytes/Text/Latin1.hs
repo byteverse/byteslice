@@ -35,6 +35,9 @@ module Data.Bytes.Text.Latin1
   , equals10
   , equals11
   , equals12
+  , equals13
+  , equals14
+  , equals15
   ) where
 
 import Prelude hiding (length)
@@ -215,6 +218,60 @@ equals12 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 !c9 !c10 !c11 (Bytes arr off len) =
         c9 == indexCharArray arr (off + 9) &&
         c10 == indexCharArray arr (off + 10) &&
         c11 == indexCharArray arr (off + 11)
+  _ -> False
+
+equals13 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
+equals13 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 !c9 !c10 !c11 !c12 (Bytes arr off len) = case len of
+  13 -> c0 == indexCharArray arr off &&
+        c1 == indexCharArray arr (off + 1) &&
+        c2 == indexCharArray arr (off + 2) &&
+        c3 == indexCharArray arr (off + 3) &&
+        c4 == indexCharArray arr (off + 4) &&
+        c5 == indexCharArray arr (off + 5) &&
+        c6 == indexCharArray arr (off + 6) &&
+        c7 == indexCharArray arr (off + 7) &&
+        c8 == indexCharArray arr (off + 8) &&
+        c9 == indexCharArray arr (off + 9) &&
+        c10 == indexCharArray arr (off + 10) &&
+        c11 == indexCharArray arr (off + 11) &&
+        c12 == indexCharArray arr (off + 12)
+  _ -> False
+
+equals14 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
+equals14 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 !c9 !c10 !c11 !c12 !c13 (Bytes arr off len) = case len of
+  14 -> c0 == indexCharArray arr off &&
+        c1 == indexCharArray arr (off + 1) &&
+        c2 == indexCharArray arr (off + 2) &&
+        c3 == indexCharArray arr (off + 3) &&
+        c4 == indexCharArray arr (off + 4) &&
+        c5 == indexCharArray arr (off + 5) &&
+        c6 == indexCharArray arr (off + 6) &&
+        c7 == indexCharArray arr (off + 7) &&
+        c8 == indexCharArray arr (off + 8) &&
+        c9 == indexCharArray arr (off + 9) &&
+        c10 == indexCharArray arr (off + 10) &&
+        c11 == indexCharArray arr (off + 11) &&
+        c12 == indexCharArray arr (off + 12) &&
+        c13 == indexCharArray arr (off + 13)
+  _ -> False
+
+equals15 :: Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Char -> Bytes -> Bool
+equals15 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 !c9 !c10 !c11 !c12 !c13 !c14 (Bytes arr off len) = case len of
+  15 -> c0 == indexCharArray arr off &&
+        c1 == indexCharArray arr (off + 1) &&
+        c2 == indexCharArray arr (off + 2) &&
+        c3 == indexCharArray arr (off + 3) &&
+        c4 == indexCharArray arr (off + 4) &&
+        c5 == indexCharArray arr (off + 5) &&
+        c6 == indexCharArray arr (off + 6) &&
+        c7 == indexCharArray arr (off + 7) &&
+        c8 == indexCharArray arr (off + 8) &&
+        c9 == indexCharArray arr (off + 9) &&
+        c10 == indexCharArray arr (off + 10) &&
+        c11 == indexCharArray arr (off + 11) &&
+        c12 == indexCharArray arr (off + 12) &&
+        c13 == indexCharArray arr (off + 13) &&
+        c14 == indexCharArray arr (off + 14)
   _ -> False
 
 indexCharArray :: ByteArray -> Int -> Char
