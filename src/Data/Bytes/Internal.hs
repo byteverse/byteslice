@@ -12,13 +12,11 @@ module Data.Bytes.Internal
 
 import Control.Monad.ST (runST)
 import Control.Monad.ST.Run (runByteArrayST)
-import Data.Bits ((.&.),unsafeShiftR)
-import Data.Char (ord)
 import Data.Primitive (ByteArray(..))
 import Data.Word (Word8)
-import GHC.Base (unsafeChr)
 import GHC.Exts (Int(I#),unsafeCoerce#,sameMutableByteArray#)
 import GHC.Exts (isTrue#,compareByteArrays#,IsList(..))
+import Data.Bytes.Internal.Show (showsSlice)
 
 import qualified Data.List as L
 import qualified Data.Foldable as F
@@ -43,26 +41,7 @@ toListLoop !off !len !arr = if len > 0
   else []
 
 instance Show Bytes where
-  showsPrec _ (Bytes arr off len) s = if len == 0
-    then showString "[]" s
-    else showString "[0x"
-       $ showHexDigits (PM.indexByteArray arr off)
-       $ showLoop (off + 1) (len - 1) arr
-       $ showChar ']'
-       $ s
-
-showLoop :: Int -> Int -> ByteArray -> String -> String
-showLoop !ix !len !arr s = if len > 0
-  then ',':'0':'x':showHexDigits (PM.indexByteArray arr ix) (showLoop (ix + 1) (len - 1) arr s)
-  else s
-
-showHexDigits :: Word8 -> String -> String
-showHexDigits !w s = word4ToChar (unsafeShiftR w 4) : word4ToChar (0x0F .&. w) : s
-
-word4ToChar :: Word8 -> Char
-word4ToChar w = if w < 10
-  then unsafeChr (ord '0' + fromIntegral w)
-  else unsafeChr (ord 'a' + (fromIntegral w) - 10)
+  showsPrec _ (Bytes arr off len) s = showsSlice arr off len s
 
 instance Eq Bytes where
   Bytes arr1 off1 len1 == Bytes arr2 off2 len2

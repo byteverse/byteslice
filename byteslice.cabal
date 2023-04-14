@@ -39,6 +39,7 @@ library
     Data.Bytes.Byte
     Data.Bytes.Pure
     Data.Bytes.IO
+    Data.Bytes.Internal.Show
     Reps
     Cstrlen
   build-depends:

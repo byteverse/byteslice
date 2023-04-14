@@ -3,6 +3,7 @@
 ## 0.2.10.0 -- 2023-??-??
 
 * Add `equals13`, `equals14`, `equals15`.
+* Add `Show` instances for `BytesN` and `ByteArrayN`.
 
 ## 0.2.9.0 -- 2022-12-08
 
