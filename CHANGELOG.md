@@ -4,6 +4,7 @@
 
 * Add `equals13`, `equals14`, `equals15`.
 * Add `Show` instances for `BytesN` and `ByteArrayN`.
+* Add `equalsCStringCaseInsensitive` for ascii text.
 
 ## 0.2.9.0 -- 2022-12-08
 

@@ -1,5 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | This module treats 'Bytes' data as holding ASCII text. Providing bytes
@@ -11,6 +13,7 @@
 module Data.Bytes.Text.Ascii
   ( fromString
   , decodeDecWord
+  , equalsCStringCaseInsensitive
   , toShortText
   , toShortTextU
 #if MIN_VERSION_text(2,0,0)
@@ -18,6 +21,7 @@ module Data.Bytes.Text.Ascii
 #endif
   ) where
 
+import Data.Bits ((.&.))
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Data.Bytes.Text.Latin1 (decodeDecWord)
 import Data.Bytes.Types (Bytes(Bytes))
@@ -26,9 +30,12 @@ import Data.Primitive (ByteArray)
 import Data.Text (Text)
 import Data.Text.Short (ShortText)
 import Data.Word (Word8)
+import Foreign.C.String (CString)
+import Foreign.Ptr (Ptr,plusPtr,castPtr)
 
 import qualified Data.Bytes.Pure as Bytes
 import qualified Data.Primitive as PM
+import qualified Data.Primitive.Ptr as PM
 import qualified Data.Text.Array as A
 import qualified Data.Text.Internal as I
 import qualified Data.Text.Short.Unsafe as TS
@@ -67,3 +74,17 @@ toText !b@(Bytes (PM.ByteArray arr) off len) = case Bytes.foldr (\w acc -> w < 1
   True -> Just (I.Text (A.ByteArray arr) off len)
   False -> Nothing
 #endif
+
+-- | Is the byte sequence equal to the @NUL@-terminated C String?
+-- The C string must be a constant.
+equalsCStringCaseInsensitive :: CString -> Bytes -> Bool
+{-# inline equalsCStringCaseInsensitive #-}
+equalsCStringCaseInsensitive !ptr0 (Bytes arr off0 len0) = go (castPtr ptr0 :: Ptr Word8) off0 len0 where
+  go !ptr !off !len = case len of
+    0 -> PM.indexOffPtr ptr 0 == (0 :: Word8)
+    _ -> case PM.indexOffPtr ptr 0 of
+      0 -> False
+      c ->
+        (c .&. 0b1101_1111) == (PM.indexByteArray arr off .&. 0b1101_1111)
+        &&
+        go (plusPtr ptr 1) (off + 1) (len - 1)
