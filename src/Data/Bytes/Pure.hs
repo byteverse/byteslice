@@ -41,7 +41,7 @@ module Data.Bytes.Pure
   , toShortByteString
   ) where
 
-import Prelude hiding (length,foldl,foldr,map,null)
+import Prelude hiding (Foldable(..),map)
 
 import Control.Monad.Primitive (PrimState,PrimMonad)
 import Control.Monad.ST.Run (runByteArrayST)
