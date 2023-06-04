@@ -47,7 +47,7 @@ module Data.Bytes.Chunks
   , writeFile
   ) where
 
-import Prelude hiding (length,concat,reverse,readFile,writeFile,null)
+import Prelude hiding (Foldable(..),concat,reverse,readFile,writeFile)
 
 import Control.Exception (IOException,catch)
 import Control.Monad.ST.Run (runIntByteArrayST)
