@@ -26,6 +26,7 @@ library
     Data.Bytes
     Data.Bytes.Chunks
     Data.Bytes.Encode.BigEndian
+    Data.Bytes.Encode.LittleEndian
     Data.Bytes.Internal
     Data.Bytes.Mutable
     Data.Bytes.Text.Ascii

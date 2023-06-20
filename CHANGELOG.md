@@ -1,5 +1,9 @@
 # Revision history for byteslice
 
+## 0.2.11.0 -- 2023-??-??
+
+* Add `Data.Bytes.Encode.LittleEndian`.
+
 ## 0.2.10.0 -- 2023-05-01
 
 * Add `equals13`, `equals14`, `equals15`.
