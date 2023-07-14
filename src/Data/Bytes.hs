@@ -1,6 +1,7 @@
 {-# language BangPatterns #-}
 {-# language BlockArguments #-}
 {-# language DuplicateRecordFields #-}
+{-# language KindSignatures #-}
 {-# language MagicHash #-}
 {-# language NamedFieldPuns #-}
 {-# language RankNTypes #-}
@@ -72,6 +73,7 @@ module Data.Bytes
   , Byte.splitStream
     -- ** Fixed from Beginning
   , Byte.split1
+  , splitTetragram1
   , Byte.split2
   , Byte.split3
   , Byte.split4
@@ -158,6 +160,9 @@ module Data.Bytes
     -- * Unlifted Types
   , lift
   , unlift
+    -- * Length Indexed
+  , withLength
+  , withLengthU
   ) where
 
 import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicate,any,all,readFile,map)
@@ -165,20 +170,24 @@ import Prelude hiding (length,takeWhile,dropWhile,null,foldl,foldr,elem,replicat
 import Control.Monad.Primitive (PrimMonad,primitive_,unsafeIOToPrim)
 import Control.Monad.ST.Run (runByteArrayST)
 import Cstrlen (cstringLength#)
+import Data.Bits (unsafeShiftL,(.|.))
 import Data.ByteString.Short.Internal (ShortByteString(SBS))
 import Data.Bytes.Pure (length,fromByteArray,foldr,unsafeDrop)
 import Data.Bytes.Pure (unsafeIndex,toShortByteString)
-import Data.Bytes.Types (Bytes(Bytes,array,offset))
+import Data.Bytes.Types (Bytes(Bytes,array,offset),BytesN(BytesN))
+import Data.Bytes.Types (ByteArrayN(ByteArrayN))
 import Data.Primitive (Array,ByteArray(ByteArray))
 import Data.Text.Short (ShortText)
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr,plusPtr,castPtr)
 import GHC.Exts (Addr#,Word#,Int#)
 import GHC.Exts (Int(I#),Ptr(Ptr))
-import GHC.Word (Word8(W8#))
+import GHC.Word (Word8(W8#),Word32)
 import Reps (Bytes#(..),word8ToWord#)
 import Data.Bytes.Search (findIndices,replace,isInfixOf)
 
+import qualified Arithmetic.Nat as Nat
+import qualified Arithmetic.Types as Arithmetic
 import qualified Data.Bytes.Byte as Byte
 import qualified Data.Bytes.Chunks as Chunks
 import qualified Data.Bytes.IO as BIO
@@ -193,6 +202,7 @@ import qualified Data.Primitive as PM
 import qualified Data.Primitive.Ptr as PM
 import qualified Data.Text.Short as TS
 import qualified GHC.Exts as Exts
+import qualified GHC.TypeNats as GHC
 
 -- | Extract the head and tail of the 'Bytes', returning 'Nothing' if
 -- it is empty.
@@ -671,3 +681,65 @@ concatArrayU !xs = runByteArrayST $ do
 concatArray :: Array Bytes -> Bytes
 {-# inline concatArray #-}
 concatArray !xs = Pure.fromByteArray (concatArrayU xs)
+
+-- | Convert 'Bytes' to 'BytesN', exposing the length in a type-safe
+-- way in the callback.
+withLength ::
+     Bytes
+  -> (forall (n :: GHC.Nat). Arithmetic.Nat n -> BytesN n -> a)
+  -> a
+{-# inline withLength #-}
+withLength Bytes{array,offset,length=len} f = Nat.with
+  len
+  (\n -> f n BytesN{array,offset})
+
+withLengthU ::
+     ByteArray
+  -> (forall (n :: GHC.Nat). Arithmetic.Nat n -> ByteArrayN n -> a)
+  -> a
+{-# inline withLengthU #-}
+withLengthU !arr f = Nat.with
+  (PM.sizeofByteArray arr)
+  (\n -> f n (ByteArrayN arr))
+
+splitTetragram1 ::
+     Word8
+  -> Word8
+  -> Word8
+  -> Word8
+  -> Bytes
+  -> Maybe (Bytes,Bytes)
+splitTetragram1 !w0 !w1 !w2 !w3 (Bytes arr off len) = if len < 4
+  then Nothing
+  else
+    let !target = 
+          unsafeShiftL (fromIntegral w0 :: Word32) 24
+          .|.
+          unsafeShiftL (fromIntegral w1 :: Word32) 16
+          .|.
+          unsafeShiftL (fromIntegral w2 :: Word32) 8
+          .|.
+          unsafeShiftL (fromIntegral w3 :: Word32) 0
+        !end = off + len
+        go !ix !acc = if acc == target
+          then
+            let n = ix - off
+             in (Just (Bytes arr off (n - 4), Bytes arr ix (len - n)))
+          else if ix < end
+            then
+              let !w = PM.indexByteArray arr ix :: Word8
+                  acc' =
+                    (fromIntegral w :: Word32)
+                    .|.
+                    unsafeShiftL acc 8
+               in go (ix + 1) acc'
+            else Nothing
+        !acc0 =
+          unsafeShiftL (fromIntegral (PM.indexByteArray arr 0 :: Word8) :: Word32) 24
+          .|.
+          unsafeShiftL (fromIntegral (PM.indexByteArray arr 1 :: Word8) :: Word32) 16
+          .|.
+          unsafeShiftL (fromIntegral (PM.indexByteArray arr 2 :: Word8) :: Word32) 8
+          .|.
+          unsafeShiftL (fromIntegral (PM.indexByteArray arr 3 :: Word8) :: Word32) 0
+     in go 4 acc0

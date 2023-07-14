@@ -265,6 +265,20 @@ tests = testGroup "Bytes"
           Nothing -> property False
           Just (y2,z2) -> (y1,z1) === (bytesToByteString y2, bytesToByteString z2)
         _ -> property Discard
+  , testProperty "splitTetragram1A" $ \(w0 :: Word8) (w1 :: Word8) (w2 :: Word8) (w3 :: Word8) (xs :: [Word8]) ->
+      (w0 /= 0xEF && w1 /= 0xEF && w2 /= 0xEF && w3 /= 0xEF)
+      ==>
+      case Bytes.splitTetragram1 w0 w1 w2 w3 (slicedPack (0xEF : w0 : w1 : w2 : w3 : xs)) of
+        Nothing -> property False
+        Just (pre,post) ->
+          (pre,post) === (Exts.fromList [0xEF], Exts.fromList xs) 
+  , testProperty "splitTetragram1B" $ \(w0 :: Word8) (w1 :: Word8) (w2 :: Word8) (w3 :: Word8) (xs :: [Word8]) ->
+      (w0 /= 0xEF && w1 /= 0xEF && w2 /= 0xEF && w3 /= 0xEF)
+      ==>
+      case Bytes.splitTetragram1 w0 w1 w2 w3 (slicedPack (0xEF : 0xEF : 0xEF : 0xEF : w0 : w1 : w2 : w3 : xs)) of
+        Nothing -> property False
+        Just (pre,post) ->
+          (pre,post) === (Exts.fromList (List.replicate 4 0xEF), Exts.fromList xs) 
   , testProperty "split2" $ \(xs :: [Word8]) (ys :: [Word8]) (zs :: [Word8]) ->
       (all (/=0xEF) xs && all (/=0xEF) ys && all (/=0xEF) zs)
       ==>
