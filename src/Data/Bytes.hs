@@ -87,6 +87,7 @@ module Data.Bytes
     -- * Searching
   , replace
   , findIndices
+  , findTetragramIndex
     -- * Counting
   , Byte.count
     -- * Prefix and Suffix
@@ -702,14 +703,14 @@ withLengthU !arr f = Nat.with
   (PM.sizeofByteArray arr)
   (\n -> f n (ByteArrayN arr))
 
-splitTetragram1 ::
+findTetragramIndex ::
      Word8
   -> Word8
   -> Word8
   -> Word8
   -> Bytes
-  -> Maybe (Bytes,Bytes)
-splitTetragram1 !w0 !w1 !w2 !w3 (Bytes arr off len) = if len < 4
+  -> Maybe Int
+findTetragramIndex !w0 !w1 !w2 !w3 (Bytes arr off len) = if len < 4
   then Nothing
   else
     let !target = 
@@ -724,7 +725,7 @@ splitTetragram1 !w0 !w1 !w2 !w3 (Bytes arr off len) = if len < 4
         go !ix !acc = if acc == target
           then
             let n = ix - off
-             in (Just (Bytes arr off (n - 4), Bytes arr ix (len - n)))
+             in Just (n - 4)
           else if ix < end
             then
               let !w = PM.indexByteArray arr ix :: Word8
@@ -743,3 +744,14 @@ splitTetragram1 !w0 !w1 !w2 !w3 (Bytes arr off len) = if len < 4
           .|.
           unsafeShiftL (fromIntegral (PM.indexByteArray arr 3 :: Word8) :: Word32) 0
      in go 4 acc0
+
+splitTetragram1 ::
+     Word8
+  -> Word8
+  -> Word8
+  -> Word8
+  -> Bytes
+  -> Maybe (Bytes,Bytes)
+splitTetragram1 !w0 !w1 !w2 !w3 !b = case findTetragramIndex w0 w1 w2 w3 b of
+  Nothing -> Nothing
+  Just n -> Just (Pure.unsafeTake n b, Pure.unsafeDrop (n + 4) b)
