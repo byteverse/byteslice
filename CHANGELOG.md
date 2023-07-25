@@ -1,6 +1,6 @@
 # Revision history for byteslice
 
-## 0.2.11.0 -- 2023-??-??
+## 0.2.11.0 -- 2023-07-25
 
 * Add `Data.Bytes.Encode.LittleEndian`.
 * Add `splitTetragram1`.
