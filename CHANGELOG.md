@@ -1,5 +1,9 @@
 # Revision history for byteslice
 
+## 0.2.11.1 -- 2023-07-26
+
+* Fix regression causing build failure in GHC 9.2.
+
 ## 0.2.11.0 -- 2023-07-25
 
 * Add `Data.Bytes.Encode.LittleEndian`.

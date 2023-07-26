@@ -1,5 +1,6 @@
 {-# language BangPatterns #-}
 {-# language BlockArguments #-}
+{-# language DataKinds #-}
 {-# language DuplicateRecordFields #-}
 {-# language KindSignatures #-}
 {-# language MagicHash #-}
