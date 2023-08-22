@@ -31,6 +31,7 @@ module Data.Bytes.Pure
   , toByteString
   , pinnedToByteString
   , fromByteString
+  , fromLazyByteString
   , unsafeDrop
   , unsafeTake
   , unsafeIndex
@@ -56,6 +57,8 @@ import GHC.IO (unsafeIOToST)
 
 import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Internal as ByteString
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Lazy.Internal as LBS
 import qualified Data.ByteString.Unsafe as ByteString
 import qualified Data.Primitive as PM
 import qualified GHC.Exts as Exts
@@ -268,6 +271,25 @@ fromByteString !b = Bytes
   ) 0 len
   where
   !len = ByteString.length b
+
+-- | /O(n)/ Copy a lazy bytestring to a byte sequence.
+fromLazyByteString :: LBS.ByteString -> Bytes
+fromLazyByteString x = case LBS.length x of
+  0 -> empty
+  n64 ->
+    let n = fromIntegral n64 :: Int
+     in Bytes
+        (runByteArrayST $ unsafeIOToST $ do
+          dst@(PM.MutableByteArray dst# ) <- PM.newByteArray n
+          let loop chunks !ix = case chunks of
+                LBS.Empty -> PM.unsafeFreezeByteArray dst
+                LBS.Chunk c cs -> do
+                  let !len = ByteString.length c
+                  ByteString.unsafeUseAsCString c $ \src -> do
+                    PM.copyPtrToMutablePrimArray (PM.MutablePrimArray dst# ) ix src len
+                  loop cs (ix + len)
+          loop x 0
+        ) 0 n
 
 -- | Drop the first @n@ bytes from the argument. Precondition: @n ≤ len@
 unsafeDrop :: Int -> Bytes -> Bytes

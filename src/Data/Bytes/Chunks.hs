@@ -21,6 +21,7 @@ module Data.Bytes.Chunks
   , length
   , null
     -- * Manipulate
+  , cons
   , concat
   , concatPinned
   , concatU
@@ -88,6 +89,11 @@ instance Eq Chunks where
   -- TODO: There is a more efficient way to do this, but
   -- it is tedious.
   a == b = concat a == concat b
+
+-- | Add a byte sequence to the beginning.
+cons :: Bytes -> Chunks -> Chunks
+{-# inline cons #-}
+cons = ChunksCons
 
 -- | Are there any bytes in the chunked byte sequences?
 null :: Chunks -> Bool

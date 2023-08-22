@@ -1,5 +1,10 @@
 # Revision history for byteslice
 
+## 0.2.12.0 -- 2023-??-??
+
+* Add `Data.Bytes.Chunks.cons`.
+* Add `Data.Bytes.fromLazyByteString`.
+
 ## 0.2.11.1 -- 2023-07-26
 
 * Fix regression causing build failure in GHC 9.2.

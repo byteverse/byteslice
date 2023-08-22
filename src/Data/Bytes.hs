@@ -150,6 +150,7 @@ module Data.Bytes
   , Pure.toByteString
   , Pure.pinnedToByteString
   , Pure.fromByteString
+  , Pure.fromLazyByteString
   , fromShortByteString
   , fromShortText
   , toShortByteString
