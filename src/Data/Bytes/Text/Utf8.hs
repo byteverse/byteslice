@@ -23,6 +23,10 @@ import qualified Data.Bytes as Bytes
 import qualified Data.Text.Internal as I
 import qualified Data.Text.Array as A
 
+#if MIN_VERSION_text(2,1,0)
+import qualified Data.Text.Internal.Validate
+#endif
+
 -- | Encode 'ShortText' using UTF-8. Since 'ShortText' is backed by a UTF-8
 -- byte sequence, this does not perform a copy.
 fromShortText :: ShortText -> Bytes
