@@ -1,7 +1,7 @@
+{-# language DataKinds #-}
 {-# language GADTSyntax #-}
 {-# language KindSignatures #-}
 {-# language MagicHash #-}
-{-# language TypeInType #-}
 {-# language UnboxedTuples #-}
 {-# language UnliftedNewtypes #-}
 
