@@ -1,9 +1,10 @@
 # Revision history for byteslice
 
-## 0.2.12.0 -- 2023-??-??
+## 0.2.12.0 -- 2023-12-14
 
 * Add `Data.Bytes.Chunks.cons`.
 * Add `Data.Bytes.fromLazyByteString`.
+* Allow building with GHC 9.8.
 
 ## 0.2.11.1 -- 2023-07-26
 
