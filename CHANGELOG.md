@@ -1,5 +1,9 @@
 # Revision history for byteslice
 
+## 0.2.13.0 -- 2024-01-12
+
+* Add `replicate` and `replicateByte` to `Data.Bytes.Chunks`.
+
 ## 0.2.12.0 -- 2023-12-14
 
 * Add `Data.Bytes.Chunks.cons`.

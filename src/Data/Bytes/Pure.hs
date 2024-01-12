@@ -40,9 +40,11 @@ module Data.Bytes.Pure
   , mapU
   , null
   , toShortByteString
+  , replicate
+  , replicateU
   ) where
 
-import Prelude hiding (Foldable(..),map)
+import Prelude hiding (Foldable(..),map,replicate)
 
 import Control.Monad.Primitive (PrimState,PrimMonad)
 import Control.Monad.ST.Run (runByteArrayST)
@@ -346,3 +348,16 @@ toShortByteString :: Bytes -> ShortByteString
 toShortByteString !b = case toByteArray b of
   PM.ByteArray x -> SBS x
 
+-- | Replicate a byte @n@ times.
+replicate ::
+     Int -- ^ Desired length @n@
+  -> Word8 -- ^ Byte to replicate
+  -> Bytes
+replicate !n !w = Bytes (replicateU n w) 0 n
+
+-- | Variant of 'replicate' that returns a unsliced byte array.
+replicateU :: Int -> Word8 -> ByteArray
+replicateU !n !w = runByteArrayST do
+  arr <- PM.newByteArray n
+  PM.setByteArray arr 0 n w
+  PM.unsafeFreezeByteArray arr

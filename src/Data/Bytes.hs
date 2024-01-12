@@ -38,12 +38,12 @@ module Data.Bytes
   , singleton
   , doubleton
   , tripleton
-  , replicate
+  , Pure.replicate
     -- ** Unsliced
   , singletonU
   , doubletonU
   , tripletonU
-  , replicateU
+  , Pure.replicateU
     -- * Filtering
   , takeWhile
   , dropWhile
@@ -312,20 +312,6 @@ tripletonU !a !b !c = runByteArrayST do
   PM.writeByteArray arr 0 a
   PM.writeByteArray arr 1 b
   PM.writeByteArray arr 2 c
-  PM.unsafeFreezeByteArray arr
-
--- | Replicate a byte @n@ times.
-replicate ::
-     Int -- ^ Desired length @n@
-  -> Word8 -- ^ Byte to replicate
-  -> Bytes
-replicate !n !w = Bytes (replicateU n w) 0 n
-
--- | Variant of 'replicate' that returns a unsliced byte array.
-replicateU :: Int -> Word8 -> ByteArray
-replicateU !n !w = runByteArrayST do
-  arr <- PM.newByteArray n
-  PM.setByteArray arr 0 n w
   PM.unsafeFreezeByteArray arr
 
 -- | /O(n)/ Return the suffix of the second string if its prefix

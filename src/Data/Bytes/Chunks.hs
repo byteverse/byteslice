@@ -29,6 +29,8 @@ module Data.Bytes.Chunks
   , concatByteString
   , reverse
   , reverseOnto
+  , replicate
+  , replicateByte
     -- * Folds
   , foldl'
     -- * Splitting
@@ -48,7 +50,7 @@ module Data.Bytes.Chunks
   , writeFile
   ) where
 
-import Prelude hiding (Foldable(..),concat,reverse,readFile,writeFile)
+import Prelude hiding (Foldable(..),concat,reverse,readFile,writeFile,replicate)
 
 import Control.Exception (IOException,catch)
 import Control.Monad.ST.Run (runIntByteArrayST)
@@ -94,6 +96,50 @@ instance Eq Chunks where
 cons :: Bytes -> Chunks -> Chunks
 {-# inline cons #-}
 cons = ChunksCons
+
+-- | Repeat the byte sequence over and over. Returns empty chunks when given
+-- a negative repetition count.
+replicate ::
+     Bytes
+  -> Int -- ^ Number of times to repeat the sequence.
+  -> Chunks
+replicate !b@(Bytes _ _ len) !n
+  | n <= 0 = ChunksNil
+  | len == 0 = ChunksNil
+  | otherwise = go n ChunksNil
+  where
+  -- Implementation note: We do not have to reverse the chunks at the end.
+  go i !acc = case i of
+    0 -> acc
+    _ -> go (i - 1) (ChunksCons b acc)
+
+-- | Repeat the byte over and over. This builds a single byte array that
+-- is at most 64KiB and shares that across every @ChunksCons@ cell.
+--
+-- An as example, creating a 2GiB chunks this way would use 64KiB for the
+-- byte array, and there would be the additional overhead of the 2^15
+-- @ChunksCons@ data constructors. On a 64-bit platform, @ChunksCons@
+-- takes 40 bytes, so the total memory consumption would be
+-- @2^16 + 40 * 2^15@, which is roughly 1.37MB. The same reasoning
+-- shows that it takes about 83.95MB to represent a 128GiB chunks.
+--
+-- The size of the shared payload is an implementation detail. Do not
+-- rely on this function producing 64KiB chunks. The implementation might
+-- one day change to something smarter that minimizes the memory footprint
+-- for very large chunks.
+replicateByte ::
+     Word8
+  -> Int -- ^ Number of times to replicate the byte
+  -> Chunks
+replicateByte !w !n
+  | n <= 0 = ChunksNil
+  | n < 65536 = ChunksCons (Bytes.replicate n w) ChunksNil
+  | otherwise = go (Bytes.replicateU 65536 w) n ChunksNil
+  where
+  go !shared !remaining !acc
+    | remaining == 0 = acc
+    | remaining < 65536 = ChunksCons (Bytes shared 0 remaining) acc
+    | otherwise = go shared (remaining - 65536) (ChunksCons (Bytes shared 0 65536) acc)
 
 -- | Are there any bytes in the chunked byte sequences?
 null :: Chunks -> Bool
