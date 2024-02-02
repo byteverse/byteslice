@@ -1,12 +1,12 @@
-{-# language MagicHash #-}
-{-# language TypeFamilies #-}
-{-# language UnliftedFFITypes #-}
+{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UnliftedFFITypes #-}
 
 module Cstrlen
   ( cstringLength#
   ) where
 
-import GHC.Exts (Addr#,Int#)
+import GHC.Exts (Addr#, Int#)
 
 foreign import ccall unsafe "strlen" c_strlen :: Addr# -> Int#
 

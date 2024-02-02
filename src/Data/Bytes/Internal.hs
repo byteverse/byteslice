@@ -1,25 +1,24 @@
-{-# language BangPatterns #-}
-{-# language DataKinds #-}
-{-# language MagicHash #-}
-{-# language TypeFamilies #-}
-{-# language DuplicateRecordFields #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- This needs to be in its own module to prevent a cyclic dependency
 -- between UnliftedBytes and Data.Bytes.Types
 module Data.Bytes.Internal
-  ( Bytes(..)
+  ( Bytes (..)
   ) where
 
 import Control.Monad.ST (runST)
 import Control.Monad.ST.Run (runByteArrayST)
-import Data.Primitive (ByteArray(..))
-import Data.Word (Word8)
-import GHC.Exts (Int(I#),unsafeCoerce#,sameMutableByteArray#)
-import GHC.Exts (isTrue#,compareByteArrays#,IsList(..))
 import Data.Bytes.Internal.Show (showsSlice)
+import Data.Primitive (ByteArray (..))
+import Data.Word (Word8)
+import GHC.Exts (Int (I#), IsList (..), compareByteArrays#, isTrue#, sameMutableByteArray#, unsafeCoerce#)
 
-import qualified Data.List as L
 import qualified Data.Foldable as F
+import qualified Data.List as L
 import qualified Data.Primitive as PM
 
 -- | A slice of a 'ByteArray'.
@@ -36,9 +35,10 @@ instance IsList Bytes where
   toList (Bytes arr off len) = toListLoop off len arr
 
 toListLoop :: Int -> Int -> ByteArray -> [Word8]
-toListLoop !off !len !arr = if len > 0
-  then PM.indexByteArray arr off : toListLoop (off + 1) (len - 1) arr
-  else []
+toListLoop !off !len !arr =
+  if len > 0
+    then PM.indexByteArray arr off : toListLoop (off + 1) (len - 1) arr
+    else []
 
 instance Show Bytes where
   showsPrec _ (Bytes arr off len) s = showsSlice arr off len s
@@ -69,15 +69,18 @@ instance Monoid Bytes where
   mconcat [] = mempty
   mconcat [x] = x
   mconcat bs = Bytes r 0 fullLen
-    where
+   where
     !fullLen = L.foldl' (\acc (Bytes _ _ len) -> acc + len) 0 bs
     r = runByteArrayST $ do
       marr <- PM.newByteArray fullLen
-      !_ <- F.foldlM
-        (\ !currLen (Bytes arr off len) -> do
-          PM.copyByteArray marr currLen arr off len
-          pure (currLen + len)
-        ) 0 bs
+      !_ <-
+        F.foldlM
+          ( \ !currLen (Bytes arr off len) -> do
+              PM.copyByteArray marr currLen arr off len
+              pure (currLen + len)
+          )
+          0
+          bs
       PM.unsafeFreezeByteArray marr
 
 compareByteArrays :: ByteArray -> Int -> ByteArray -> Int -> Int -> Ordering
@@ -89,4 +92,3 @@ sameByteArray :: ByteArray -> ByteArray -> Bool
 {-# INLINE sameByteArray #-}
 sameByteArray (ByteArray ba1#) (ByteArray ba2#) =
   isTrue# (sameMutableByteArray# (unsafeCoerce# ba1#) (unsafeCoerce# ba2#))
-

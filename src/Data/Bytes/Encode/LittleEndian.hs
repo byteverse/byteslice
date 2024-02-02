@@ -1,5 +1,5 @@
-{-# language BangPatterns #-}
-{-# language TypeApplications #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Data.Bytes.Encode.LittleEndian
   ( word16
@@ -13,17 +13,17 @@ module Data.Bytes.Encode.LittleEndian
 import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bits (unsafeShiftR)
 import Data.Bytes.Types (Bytes)
-import Data.Int (Int16,Int32,Int64)
+import Data.Int (Int16, Int32, Int64)
 import Data.Primitive (ByteArray)
-import Data.Word (Word8,Word16,Word32,Word64)
+import Data.Word (Word16, Word32, Word64, Word8)
 
 import qualified Data.Bytes.Pure as Pure
 import qualified Data.Primitive as PM
 
 -- | Encode a 32-bit signed integer as 4 bytes.
 int32 :: Int32 -> Bytes
-{-# inline int32 #-}
-int32 = word32 . fromIntegral @Int32 @Word32 
+{-# INLINE int32 #-}
+int32 = word32 . fromIntegral @Int32 @Word32
 
 -- | Encode a 32-bit unsigned integer as 4 bytes.
 word32 :: Word32 -> Bytes
@@ -40,8 +40,8 @@ word32U !w = runByteArrayST $ do
 
 -- | Encode a 16-bit signed integer as 4 bytes.
 int16 :: Int16 -> Bytes
-{-# inline int16 #-}
-int16 = word16 . fromIntegral @Int16 @Word16 
+{-# INLINE int16 #-}
+int16 = word16 . fromIntegral @Int16 @Word16
 
 -- | Encode a 16-bit unsigned integer as 4 bytes.
 word16 :: Word16 -> Bytes
@@ -56,8 +56,8 @@ word16U !w = runByteArrayST $ do
 
 -- | Encode a 16-bit signed integer as 4 bytes.
 int64 :: Int64 -> Bytes
-{-# inline int64 #-}
-int64 = word64 . fromIntegral @Int64 @Word64 
+{-# INLINE int64 #-}
+int64 = word64 . fromIntegral @Int64 @Word64
 
 -- | Encode a 16-bit unsigned integer as 4 bytes.
 word64 :: Word64 -> Bytes

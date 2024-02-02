@@ -1,4 +1,4 @@
-{-# language MagicHash #-}
+{-# LANGUAGE MagicHash #-}
 
 module Cstrlen
   ( cstringLength#

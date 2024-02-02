@@ -1,5 +1,5 @@
-{-# language CPP #-}
-{-# language BangPatterns #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE CPP #-}
 
 -- | Convert 'Bytes' to and from 'Text' and 'ShortText'.
 module Data.Bytes.Text.Utf8
@@ -9,34 +9,36 @@ module Data.Bytes.Text.Utf8
   , fromText
 #endif
 #if MIN_VERSION_text(2,1,0)
-  , toText
+  -- , toText
 #endif
   ) where
 
-import Data.Bytes.Types (Bytes(Bytes))
-import Data.Text.Short (ShortText)
+import Data.Bytes.Types (Bytes (Bytes))
+import Data.Primitive (ByteArray (ByteArray))
 import Data.Text (Text)
-import Data.Primitive (ByteArray(ByteArray))
+import Data.Text.Short (ShortText)
 
-import qualified Data.Text.Short as TS
 import qualified Data.Bytes as Bytes
-import qualified Data.Text.Internal as I
 import qualified Data.Text.Array as A
+import qualified Data.Text.Internal as I
+import qualified Data.Text.Short as TS
 
 #if MIN_VERSION_text(2,1,0)
 import qualified Data.Text.Internal.Validate
 #endif
 
--- | Encode 'ShortText' using UTF-8. Since 'ShortText' is backed by a UTF-8
--- byte sequence, this does not perform a copy.
+{- | Encode 'ShortText' using UTF-8. Since 'ShortText' is backed by a UTF-8
+byte sequence, this does not perform a copy.
+-}
 fromShortText :: ShortText -> Bytes
-{-# inline fromShortText #-}
+{-# INLINE fromShortText #-}
 fromShortText = Bytes.fromShortByteString . TS.toShortByteString
 
--- | Attempt to interpret the byte sequence as UTF-8 encoded text. Returns
--- 'Nothing' if the bytes are not UTF-8 encoded text.
+{- | Attempt to interpret the byte sequence as UTF-8 encoded text. Returns
+'Nothing' if the bytes are not UTF-8 encoded text.
+-}
 toShortText :: Bytes -> Maybe ShortText
-{-# inline toShortText #-}
+{-# INLINE toShortText #-}
 toShortText !b = TS.fromShortByteString (Bytes.toShortByteString b)
 
 #if MIN_VERSION_text(2,0,0)
