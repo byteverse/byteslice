@@ -1,33 +1,33 @@
-{-# language BangPatterns #-}
-{-# language BlockArguments #-}
-{-# language MagicHash #-}
-{-# language NamedFieldPuns #-}
-{-# language TypeApplications #-}
-{-# language UnboxedTuples #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE MagicHash #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UnboxedTuples #-}
 
 module Data.Bytes.IO
   ( hGet
   , hPut
   ) where
 
-import Data.Primitive (MutableByteArray,ByteArray(..))
-import Data.Word (Word8)
-import Data.Bytes.Types (Bytes(Bytes))
-import Data.Bytes.Pure (pin,contents)
-import System.IO (Handle)
-import Foreign.Ptr (Ptr)
-import GHC.IO (IO(IO))
-import qualified System.IO as IO
-import qualified GHC.Exts as Exts
+import Data.Bytes.Pure (contents, pin)
+import Data.Bytes.Types (Bytes (Bytes))
+import Data.Primitive (ByteArray (..), MutableByteArray)
 import qualified Data.Primitive as PM
+import Data.Word (Word8)
+import Foreign.Ptr (Ptr)
+import qualified GHC.Exts as Exts
+import GHC.IO (IO (IO))
+import System.IO (Handle)
+import qualified System.IO as IO
 
--- | Read 'Bytes' directly from the specified 'Handle'. The resulting
--- 'Bytes' are pinned. This is implemented with 'IO.hGetBuf'.
+{- | Read 'Bytes' directly from the specified 'Handle'. The resulting
+'Bytes' are pinned. This is implemented with 'IO.hGetBuf'.
+-}
 hGet :: Handle -> Int -> IO Bytes
 hGet h i = createPinnedAndTrim i (\p -> IO.hGetBuf h p i)
 
--- | Outputs 'Bytes' to the specified 'Handle'. This is implemented
--- with 'IO.hPutBuf'.
+{- | Outputs 'Bytes' to the specified 'Handle'. This is implemented
+with 'IO.hPutBuf'.
+-}
 hPut :: Handle -> Bytes -> IO ()
 hPut h b0 = do
   let b1@(Bytes arr _ len) = pin b0
@@ -36,7 +36,7 @@ hPut h b0 = do
 
 -- Only used internally.
 createPinnedAndTrim :: Int -> (Ptr Word8 -> IO Int) -> IO Bytes
-{-# inline createPinnedAndTrim #-}
+{-# INLINE createPinnedAndTrim #-}
 createPinnedAndTrim maxSz f = do
   arr@(PM.MutableByteArray arr#) <- PM.newPinnedByteArray maxSz
   sz <- f (PM.mutableByteArrayContents arr)

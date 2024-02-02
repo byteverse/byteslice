@@ -1,5 +1,9 @@
 # Revision history for byteslice
 
+## 0.2.13.1 -- 2024-02-01
+
+* Update package metadata.
+
 ## 0.2.13.0 -- 2024-01-12
 
 * Add `replicate` and `replicateByte` to `Data.Bytes.Chunks`.
@@ -64,7 +68,7 @@
 ## 0.2.5.0 -- 2021-01-22
 
 * Add `Data.Bytes.Chunks.concatByteString`.
-* Expose `pinnedToByteString` to end users. 
+* Expose `pinnedToByteString` to end users.
 
 ## 0.2.4.0 -- 2020-10-15
 
