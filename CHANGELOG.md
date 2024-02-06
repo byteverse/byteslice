@@ -1,8 +1,15 @@
 # Revision history for byteslice
 
+## 0.2.13.2 -- 2024-02-06
+
+* Reinstate `Data.Bytes.Text.Utf8.toText`.
+
 ## 0.2.13.1 -- 2024-02-01
 
 * Update package metadata.
+* Note: this release accidentally removes `Data.Bytes.Text.Utf8.toText`,
+  which is added back in 0.2.13.2. This release is marked deprecated on
+  Hackage.
 
 ## 0.2.13.0 -- 2024-01-12
 
