@@ -1,5 +1,9 @@
 # Revision history for byteslice
 
+## 0.2.13.2 -- 2024-02-06
+
+* Restore `Data.Bytes.Text.Utf8.toText`.
+
 ## 0.2.13.1 -- 2024-02-01
 
 * Update package metadata.
