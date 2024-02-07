@@ -9,7 +9,7 @@ module Data.Bytes.Text.Utf8
   , fromText
 #endif
 #if MIN_VERSION_text(2,1,0)
-  -- , toText
+  , toText
 #endif
   ) where
 

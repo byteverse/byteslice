@@ -1,0 +1,3 @@
+-- 2024-02-06: Including this to make "cabal test" work on build machine.
+packages: .
+tests: True
