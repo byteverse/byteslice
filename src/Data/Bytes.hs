@@ -34,8 +34,8 @@ module Data.Bytes
   , unsnoc
 
     -- * Predicates
-  , any
-  , all
+  , Pure.any
+  , Pure.all
 
     -- * Create
 
@@ -89,7 +89,7 @@ module Data.Bytes
 
     -- ** Fixed from Beginning
   , Byte.split1
-  , splitTetragram1
+  , Pure.splitTetragram1
   , Byte.split2
   , Byte.split3
   , Byte.split4
@@ -106,7 +106,7 @@ module Data.Bytes
     -- * Searching
   , replace
   , findIndices
-  , findTetragramIndex
+  , Pure.findTetragramIndex
 
     -- * Counting
   , Byte.count
@@ -207,9 +207,8 @@ import Prelude hiding (all, any, dropWhile, elem, foldl, foldr, length, map, nul
 import Control.Monad.Primitive (PrimMonad, primitive_, unsafeIOToPrim)
 import Control.Monad.ST.Run (runByteArrayST)
 import Cstrlen (cstringLength#)
-import Data.Bits (unsafeShiftL, (.|.))
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
-import Data.Bytes.Pure (foldr, fromByteArray, length, toShortByteString, unsafeDrop, unsafeIndex)
+import Data.Bytes.Pure (fromByteArray, length, toShortByteString, unsafeDrop, unsafeIndex)
 import Data.Bytes.Search (findIndices, isInfixOf, replace)
 import Data.Bytes.Types (ByteArrayN (ByteArrayN), Bytes (Bytes, array, offset), BytesN (BytesN))
 import Data.Primitive (Array, ByteArray (ByteArray))
@@ -217,7 +216,7 @@ import Data.Text.Short (ShortText)
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr, castPtr, plusPtr)
 import GHC.Exts (Addr#, Int (I#), Int#, Ptr (Ptr), Word#)
-import GHC.Word (Word32, Word8 (W8#))
+import GHC.Word (Word8 (W8#))
 import Reps (Bytes# (..), word8ToWord#)
 
 import qualified Arithmetic.Nat as Nat
@@ -402,12 +401,12 @@ elemLoop !r !w (Bytes arr@(ByteArray arr#) off@(I# off#) len) = case len of
 -- | Take bytes while the predicate is true.
 takeWhile :: (Word8 -> Bool) -> Bytes -> Bytes
 {-# INLINE takeWhile #-}
-takeWhile k b = Pure.unsafeTake (countWhile k b) b
+takeWhile k b = Pure.unsafeTake (Pure.countWhile k b) b
 
 -- | Drop bytes while the predicate is true.
 dropWhile :: (Word8 -> Bool) -> Bytes -> Bytes
 {-# INLINE dropWhile #-}
-dropWhile k b = Pure.unsafeDrop (countWhile k b) b
+dropWhile k b = Pure.unsafeDrop (Pure.countWhile k b) b
 
 {- | /O(n)/ 'dropWhileEnd' @p@ @b@ returns the prefix remaining after
 dropping characters that satisfy the predicate @p@ from the end of
@@ -415,7 +414,7 @@ dropping characters that satisfy the predicate @p@ from the end of
 -}
 dropWhileEnd :: (Word8 -> Bool) -> Bytes -> Bytes
 {-# INLINE dropWhileEnd #-}
-dropWhileEnd k !b = Pure.unsafeTake (length b - countWhileEnd k b) b
+dropWhileEnd k !b = Pure.unsafeTake (length b - Pure.countWhileEnd k b) b
 
 {- | /O(n)/ 'takeWhileEnd' @p@ @b@ returns the longest suffix of
 elements that satisfy predicate @p@.
@@ -423,38 +422,8 @@ elements that satisfy predicate @p@.
 takeWhileEnd :: (Word8 -> Bool) -> Bytes -> Bytes
 {-# INLINE takeWhileEnd #-}
 takeWhileEnd k !b =
-  let n = countWhileEnd k b
+  let n = Pure.countWhileEnd k b
    in Bytes (array b) (offset b + length b - n) n
-
--- Internal. The returns the number of bytes that match the
--- predicate until the first non-match occurs. If all bytes
--- match the predicate, this will return the length originally
--- provided.
-countWhile :: (Word8 -> Bool) -> Bytes -> Int
-{-# INLINE countWhile #-}
-countWhile k (Bytes arr off0 len0) = go off0 len0 0
- where
-  go !off !len !n =
-    if len > 0
-      then
-        if k (PM.indexByteArray arr off)
-          then go (off + 1) (len - 1) (n + 1)
-          else n
-      else n
-
--- Internal. Variant of countWhile that starts from the end
--- of the string instead of the beginning.
-countWhileEnd :: (Word8 -> Bool) -> Bytes -> Int
-{-# INLINE countWhileEnd #-}
-countWhileEnd k (Bytes arr off0 len0) = go (off0 + len0 - 1) (len0 - 1) 0
- where
-  go !off !len !n =
-    if len >= 0
-      then
-        if k (PM.indexByteArray arr off)
-          then go (off - 1) (len - 1) (n + 1)
-          else n
-      else n
 
 {- | Convert a 'String' consisting of only characters in the ASCII block
 to a byte sequence. Any character with a codepoint above @U+007F@ is
@@ -694,16 +663,6 @@ intercalateByte2 !sep !a !b =
  where
   len = length a + length b + 1
 
--- | /O(n)/ Returns true if any byte in the sequence satisfies the predicate.
-any :: (Word8 -> Bool) -> Bytes -> Bool
-{-# INLINE any #-}
-any f = foldr (\b r -> f b || r) False
-
--- | /O(n)/ Returns true if all bytes in the sequence satisfy the predicate.
-all :: (Word8 -> Bool) -> Bytes -> Bool
-{-# INLINE all #-}
-all f = foldr (\b r -> f b && r) True
-
 {- | Variant of 'toShortByteString' that unconditionally makes a copy of
 the array backing the sliced 'Bytes' even if the original array
 could be reused. Prefer 'toShortByteString'.
@@ -786,52 +745,3 @@ withLengthU !arr f =
   Nat.with
     (PM.sizeofByteArray arr)
     (\n -> f n (ByteArrayN arr))
-
-findTetragramIndex ::
-  Word8 ->
-  Word8 ->
-  Word8 ->
-  Word8 ->
-  Bytes ->
-  Maybe Int
-findTetragramIndex !w0 !w1 !w2 !w3 (Bytes arr off len) =
-  if len < 4
-    then Nothing
-    else
-      let !target =
-            unsafeShiftL (fromIntegral w0 :: Word32) 24
-              .|. unsafeShiftL (fromIntegral w1 :: Word32) 16
-              .|. unsafeShiftL (fromIntegral w2 :: Word32) 8
-              .|. unsafeShiftL (fromIntegral w3 :: Word32) 0
-          !end = off + len
-          go !ix !acc =
-            if acc == target
-              then
-                let n = ix - off
-                 in Just (n - 4)
-              else
-                if ix < end
-                  then
-                    let !w = PM.indexByteArray arr ix :: Word8
-                        acc' =
-                          (fromIntegral w :: Word32)
-                            .|. unsafeShiftL acc 8
-                     in go (ix + 1) acc'
-                  else Nothing
-          !acc0 =
-            unsafeShiftL (fromIntegral (PM.indexByteArray arr 0 :: Word8) :: Word32) 24
-              .|. unsafeShiftL (fromIntegral (PM.indexByteArray arr 1 :: Word8) :: Word32) 16
-              .|. unsafeShiftL (fromIntegral (PM.indexByteArray arr 2 :: Word8) :: Word32) 8
-              .|. unsafeShiftL (fromIntegral (PM.indexByteArray arr 3 :: Word8) :: Word32) 0
-       in go 4 acc0
-
-splitTetragram1 ::
-  Word8 ->
-  Word8 ->
-  Word8 ->
-  Word8 ->
-  Bytes ->
-  Maybe (Bytes, Bytes)
-splitTetragram1 !w0 !w1 !w2 !w3 !b = case findTetragramIndex w0 w1 w2 w3 b of
-  Nothing -> Nothing
-  Just n -> Just (Pure.unsafeTake n b, Pure.unsafeDrop (n + 4) b)
