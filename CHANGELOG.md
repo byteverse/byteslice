@@ -1,5 +1,11 @@
 # Revision history for byteslice
 
+## 0.2.14.0 -- 2024-02-26
+
+* Add functions to `Data.Bytes.Text.AsciiExt`: `split(1|2|3|4)`,
+  `splitTetragram1`, `anyEq`, `takeWhileNotEq`, `dropWhileNotEq`,
+  `takeWhileEndNotEq`, dropWhileEndEq`.
+
 ## 0.2.13.2 -- 2024-02-06
 
 * Restore `Data.Bytes.Text.Utf8.toText`.

@@ -40,12 +40,19 @@ module Data.Bytes.Pure
   , toShortByteString
   , replicate
   , replicateU
+  , splitTetragram1
+  , findTetragramIndex
+  , countWhile
+  , countWhileEnd
+  , any
+  , all
   ) where
 
-import Prelude hiding (Foldable (..), map, replicate)
+import Prelude hiding (Foldable (..), map, replicate, any, all)
 
 import Control.Monad.Primitive (PrimMonad, PrimState)
 import Control.Monad.ST.Run (runByteArrayST)
+import Data.Bits (unsafeShiftL, (.|.))
 import Data.Bits (xor)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
@@ -402,3 +409,93 @@ replicateU !n !w = runByteArrayST do
   arr <- PM.newByteArray n
   PM.setByteArray arr 0 n w
   PM.unsafeFreezeByteArray arr
+
+splitTetragram1 ::
+  Word8 ->
+  Word8 ->
+  Word8 ->
+  Word8 ->
+  Bytes ->
+  Maybe (Bytes, Bytes)
+splitTetragram1 !w0 !w1 !w2 !w3 !b = case findTetragramIndex w0 w1 w2 w3 b of
+  Nothing -> Nothing
+  Just n -> Just (unsafeTake n b, unsafeDrop (n + 4) b)
+
+findTetragramIndex ::
+  Word8 ->
+  Word8 ->
+  Word8 ->
+  Word8 ->
+  Bytes ->
+  Maybe Int
+findTetragramIndex !w0 !w1 !w2 !w3 (Bytes arr off len) =
+  if len < 4
+    then Nothing
+    else
+      let !target =
+            unsafeShiftL (fromIntegral w0 :: Word32) 24
+              .|. unsafeShiftL (fromIntegral w1 :: Word32) 16
+              .|. unsafeShiftL (fromIntegral w2 :: Word32) 8
+              .|. unsafeShiftL (fromIntegral w3 :: Word32) 0
+          !end = off + len
+          go !ix !acc =
+            if acc == target
+              then
+                let n = ix - off
+                 in Just (n - 4)
+              else
+                if ix < end
+                  then
+                    let !w = PM.indexByteArray arr ix :: Word8
+                        acc' =
+                          (fromIntegral w :: Word32)
+                            .|. unsafeShiftL acc 8
+                     in go (ix + 1) acc'
+                  else Nothing
+          !acc0 =
+            unsafeShiftL (fromIntegral (PM.indexByteArray arr 0 :: Word8) :: Word32) 24
+              .|. unsafeShiftL (fromIntegral (PM.indexByteArray arr 1 :: Word8) :: Word32) 16
+              .|. unsafeShiftL (fromIntegral (PM.indexByteArray arr 2 :: Word8) :: Word32) 8
+              .|. unsafeShiftL (fromIntegral (PM.indexByteArray arr 3 :: Word8) :: Word32) 0
+       in go 4 acc0
+
+-- Internal. The returns the number of bytes that match the
+-- predicate until the first non-match occurs. If all bytes
+-- match the predicate, this will return the length originally
+-- provided.
+countWhile :: (Word8 -> Bool) -> Bytes -> Int
+{-# INLINE countWhile #-}
+countWhile k (Bytes arr off0 len0) = go off0 len0 0
+ where
+  go !off !len !n =
+    if len > 0
+      then
+        if k (PM.indexByteArray arr off)
+          then go (off + 1) (len - 1) (n + 1)
+          else n
+      else n
+
+-- Internal. Variant of countWhile that starts from the end
+-- of the string instead of the beginning.
+countWhileEnd :: (Word8 -> Bool) -> Bytes -> Int
+{-# INLINE countWhileEnd #-}
+countWhileEnd k (Bytes arr off0 len0) = go (off0 + len0 - 1) (len0 - 1) 0
+ where
+  go !off !len !n =
+    if len >= 0
+      then
+        if k (PM.indexByteArray arr off)
+          then go (off - 1) (len - 1) (n + 1)
+          else n
+      else n
+
+-- | /O(n)/ Returns true if any byte in the sequence satisfies the predicate.
+any :: (Word8 -> Bool) -> Bytes -> Bool
+{-# INLINE any #-}
+any f = foldr (\b r -> f b || r) False
+
+-- | /O(n)/ Returns true if all bytes in the sequence satisfy the predicate.
+all :: (Word8 -> Bool) -> Bytes -> Bool
+{-# INLINE all #-}
+all f = foldr (\b r -> f b && r) True
+

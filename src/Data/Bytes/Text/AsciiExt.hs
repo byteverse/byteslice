@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- For functions that can fail for bytes outside the ASCII range, see
 -- 'Data.Bytes.Ascii'. For functions that can inspect bytes outside ASCII, see
@@ -19,6 +20,23 @@ module Data.Bytes.Text.AsciiExt
   , forLines_
   , foldLines
 
+    -- * Predicates
+  , anyEq
+
+    -- * Filtering
+  , takeWhileNotEq
+  , dropWhileNotEq
+  , takeWhileEndNotEq
+  , dropWhileEndEq
+
+    -- * Splitting
+    -- ** Fixed from Beginning
+  , split1
+  , splitTetragram1
+  , split2
+  , split3
+  , split4
+
     -- * Text Manipulation
   , toLowerU
   ) where
@@ -26,12 +44,14 @@ module Data.Bytes.Text.AsciiExt
 import Control.Monad.ST (ST)
 import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bytes.Types (Bytes (..))
+import Data.Char (ord)
 import Data.Primitive (ByteArray)
 import Data.Word (Word8)
 import System.IO (Handle, hIsEOF, stdin)
 
 import qualified Data.ByteString.Char8 as BC8
 import qualified Data.Bytes.Pure as Bytes
+import qualified Data.Bytes.Byte as Byte
 import qualified Data.Primitive as PM
 
 -- | `hForLines_` over `stdin`
@@ -104,3 +124,85 @@ toLowerU (Bytes src off0 len0) =
               go (off + 1) (ix + 1) (len - 1)
     go off0 0 len0
     PM.unsafeFreezeByteArray dst
+
+-- | Throws an exception the 'Char' argument is non-ascii.
+split1 :: Char -> Bytes -> Maybe (Bytes, Bytes)
+{-# INLINE split1 #-}
+split1 !c !b
+  | c > '\DEL' = errorWithoutStackTrace "Data.Bytes.Text.AsciiExt.split1: argument not in ASCII range"
+  | otherwise = Byte.split1 (c2w c) b
+
+-- | Throws an exception the 'Char' argument is non-ascii.
+split2 :: Char -> Bytes -> Maybe (Bytes, Bytes, Bytes)
+{-# INLINE split2 #-}
+split2 !c !b
+  | c > '\DEL' = errorWithoutStackTrace "Data.Bytes.Text.AsciiExt.split2: argument not in ASCII range"
+  | otherwise = Byte.split2 (c2w c) b
+
+-- | Throws an exception the 'Char' argument is non-ascii.
+split3 :: Char -> Bytes -> Maybe (Bytes, Bytes, Bytes, Bytes)
+{-# INLINE split3 #-}
+split3 !c !b
+  | c > '\DEL' = errorWithoutStackTrace "Data.Bytes.Text.AsciiExt.split3: argument not in ASCII range"
+  | otherwise = Byte.split3 (c2w c) b
+
+-- | Throws an exception the 'Char' argument is non-ascii.
+split4 :: Char -> Bytes -> Maybe (Bytes, Bytes, Bytes, Bytes, Bytes)
+{-# INLINE split4 #-}
+split4 !c !b
+  | c > '\DEL' = errorWithoutStackTrace "Data.Bytes.Text.AsciiExt.split4: argument not in ASCII range"
+  | otherwise = Byte.split4 (c2w c) b
+
+-- | Throws an exception if any of the 'Char' arguments are non-ascii.
+splitTetragram1 :: Char -> Char -> Char -> Char -> Bytes -> Maybe (Bytes, Bytes)
+{-# inline splitTetragram1 #-}
+splitTetragram1 !c0 !c1 !c2 !c3 !b
+  | c0 > '\DEL' || c1 > '\DEL' || c2 > '\DEL' || c3 > '\DEL' =
+      errorWithoutStackTrace "Data.Bytes.Text.AsciiExt.splitTetragram1: one of the characters is not in ASCII range"
+  | otherwise = Bytes.splitTetragram1 (c2w c0) (c2w c1) (c2w c2) (c2w c3) b
+
+c2w :: Char -> Word8
+{-# inline c2w #-}
+c2w !c = fromIntegral @Int @Word8 (ord c)
+
+-- | Throws an exception the 'Char' argument is non-ascii.
+dropWhileNotEq :: Char -> Bytes -> Bytes
+dropWhileNotEq !c !b
+  | c > '\DEL' = errorWithoutStackTrace "Data.Bytes.Text.AsciiExt.dropWhileNotEq: argument not in ASCII range"
+  | otherwise =
+      let !w = c2w c
+       in Bytes.unsafeDrop (Bytes.countWhile (/= w) b) b
+
+-- | Throws an exception the 'Char' argument is non-ascii.
+takeWhileNotEq :: Char -> Bytes -> Bytes
+takeWhileNotEq !c !b
+  | c > '\DEL' = errorWithoutStackTrace "Data.Bytes.Text.AsciiExt.takeWhileNotEq: argument not in ASCII range"
+  | otherwise =
+      let !w = c2w c
+       in Bytes.unsafeTake (Bytes.countWhile (/= w) b) b
+  
+-- | Throws an exception the 'Char' argument is non-ascii.
+takeWhileEndNotEq :: Char -> Bytes -> Bytes
+takeWhileEndNotEq !c !b
+  | c > '\DEL' = errorWithoutStackTrace "Data.Bytes.Text.AsciiExt.takeWhileEndNotEq: argument not in ASCII range"
+  | otherwise =
+      let !w = c2w c
+          !n = Bytes.countWhileEnd (/=w) b
+       in Bytes (array b) (offset b + Bytes.length b - n) n
+
+-- | Throws an exception the 'Char' argument is non-ascii.
+dropWhileEndEq :: Char -> Bytes -> Bytes
+dropWhileEndEq !c !b
+  | c > '\DEL' = errorWithoutStackTrace "Data.Bytes.Text.AsciiExt.dropWhileEndEq: argument not in ASCII range"
+  | otherwise =
+      let !w = c2w c
+          !n = Bytes.countWhileEnd (==w) b
+       in Bytes.unsafeTake (Bytes.length b - n) b
+
+-- | Throws an exception the 'Char' argument is non-ascii.
+anyEq :: Char -> Bytes -> Bool
+anyEq !c !b
+  | c > '\DEL' = errorWithoutStackTrace "Data.Bytes.Text.AsciiExt.takeWhileNotEq: argument not in ASCII range"
+  | otherwise =
+      let !w = c2w c
+       in Bytes.any (==w) b
