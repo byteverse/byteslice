@@ -5,6 +5,7 @@
 * Add functions to `Data.Bytes.Text.AsciiExt`: `split(1|2|3|4)`,
   `splitTetragram1`, `anyEq`, `takeWhileNotEq`, `dropWhileNotEq`,
   `takeWhileEndNotEq`, dropWhileEndEq`.
+* Increment upper bound on `primitive-unlifted`
 
 ## 0.2.13.2 -- 2024-02-06
 
