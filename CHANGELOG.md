@@ -1,5 +1,10 @@
 # Revision history for byteslice
 
+## 0.2.15.0 -- 2024-06-12
+
+* Add functions for recovering length from `ByteArrayN`
+* Add `Data.Bytes.Indexed` for functions on `ByteArrayN`
+
 ## 0.2.14.0 -- 2024-02-26
 
 * Add functions to `Data.Bytes.Text.AsciiExt`: `split(1|2|3|4)`,
