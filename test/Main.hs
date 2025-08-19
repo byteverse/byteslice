@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -39,6 +40,8 @@ import qualified GHC.Exts as Exts
 import qualified Test.QuickCheck.Classes as QCC
 import qualified Test.Tasty.HUnit as THU
 import qualified Test.Tasty.QuickCheck as TQC
+import qualified Data.Text.Array as A
+import qualified Data.Text.Internal as I
 
 main :: IO ()
 main = defaultMain tests
@@ -333,6 +336,18 @@ tests =
                 Chunks.concatU (ChunksCons b ChunksNil) === Bytes.toByteArray b
             ]
         ]
+    , testGroup
+        "ASCII"
+        [ testGroup
+          "toText=naiveAsciiToText"
+          [ testProperty "alpha" $ \(ws :: [Word8]) ->
+              let b = slicedPack ws in naiveAsciiToText b === Ascii.toText b
+          , testProperty "beta" $ \(ws :: [Word8]) ->
+              let b = slicedPackAlt ws in naiveAsciiToText b === Ascii.toText b
+          , testProperty "gamma" $ \(ASCIIString cs) ->
+              let b = bytes cs in naiveAsciiToText b === Ascii.toText b
+          ]
+        ]
     ]
 
 bytes :: String -> Bytes
@@ -341,6 +356,11 @@ bytes s = let b = pack ('x' : s) in Bytes b 1 (PM.sizeofByteArray b - 1)
 slicedPack :: [Word8] -> Bytes
 slicedPack s =
   let b = Exts.fromList ([0x00] ++ s ++ [0x00])
+   in Bytes b 1 (PM.sizeofByteArray b - 2)
+
+slicedPackAlt :: [Word8] -> Bytes
+slicedPackAlt s =
+  let b = Exts.fromList ([0xFF] ++ s ++ [0x80])
    in Bytes b 1 (PM.sizeofByteArray b - 2)
 
 pack :: String -> ByteArray
@@ -386,3 +406,9 @@ asciiStringToBytes (ASCIIString x) = bytes x
 
 asciiStringToText :: ASCIIString -> Text
 asciiStringToText (ASCIIString x) = Text.pack x
+
+naiveAsciiToText :: Bytes -> Maybe Text
+{-# noinline naiveAsciiToText #-}
+naiveAsciiToText !b@(Bytes (PM.ByteArray arr) off len) = case Bytes.foldr (\w acc -> w < 128 && acc) True b of
+  True -> Just (I.Text (A.ByteArray arr) off len)
+  False -> Nothing

@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -17,9 +18,7 @@ module Data.Bytes.Text.Ascii
   , equalsCStringCaseInsensitive
   , toShortText
   , toShortTextU
-#if MIN_VERSION_text(2,0,0)
   , toText
-#endif
   ) where
 
 import Data.Bits ((.&.))
@@ -33,6 +32,8 @@ import Data.Text.Short (ShortText)
 import Data.Word (Word8)
 import Foreign.C.String (CString)
 import Foreign.Ptr (Ptr, castPtr, plusPtr)
+import GHC.Exts (Int#,Word#,ByteArray#,(+#),(<#))
+import GHC.Int (Int(I#))
 
 import qualified Data.Bytes.Pure as Bytes
 import qualified Data.Primitive as PM
@@ -66,17 +67,58 @@ toShortTextU !b = case Bytes.foldr (\w acc -> w < 128 && acc) True (Bytes.fromBy
   True -> Just (TS.fromShortByteStringUnsafe (case b of PM.ByteArray x -> SBS x))
   False -> Nothing
 
-#if MIN_VERSION_text(2,0,0)
 -- | Interpret byte sequence as ASCII codepoints.
--- Only available when building with @text-2.0@ and newer.
 -- Returns 'Nothing' if any of the bytes are outside of the
 -- range @0x00-0x7F@
+--
+-- This does not work on 32-bit architectures. I am not certain if it
+-- even compiles on those systems.
 toText :: Bytes -> Maybe Text
-{-# inline toText #-}
-toText !b@(Bytes (PM.ByteArray arr) off len) = case Bytes.foldr (\w acc -> w < 128 && acc) True b of
-  True -> Just (I.Text (A.ByteArray arr) off len)
-  False -> Nothing
-#endif
+toText (Bytes (PM.ByteArray arr) off@(I# off# ) len@(I# len# )) =
+  let !r0 = validateAscii# arr off# len# (off# +# len# )
+      !r1 = Exts.and# r0 0b1000_0000_1000_0000_1000_0000_1000_0000_1000_0000_1000_0000_1000_0000_1000_0000##
+   in case r1 of
+        0## -> Just (I.Text (A.ByteArray arr) off len)
+        _ -> Nothing
+
+-- returns 0 to mean that the input slice was all ascii text
+-- any other number means that a non-ascii byte was encountered
+-- Precondition: len and end must agree with one another.
+validateAscii# :: ByteArray# -> Int# -> Int# -> Int# -> Word#
+{-# noinline validateAscii# #-}
+validateAscii# arr off len end
+  -- This length check at the beginning is not just a performance optimization.
+  -- If the length of the slice is less than 8, the calculations of "middle start"
+  -- and "middle end" in the otherwise clause are out of bounds.
+  | 1# <- len <# 20# = validateRangeSlowly# 0## off end arr
+  | otherwise =
+      let !middleStartSwar = Exts.uncheckedIShiftRL# (off +# 7#) 3#
+          !middleEndSwar = Exts.uncheckedIShiftRL# end 3#
+          !w0 = validateRangeSwar# 0## middleStartSwar middleEndSwar arr
+          !w1 = validateRangeSlowly# w0 off (Exts.uncheckedIShiftL# middleStartSwar 3# ) arr
+          !w2 = validateRangeSlowly# w1 (Exts.uncheckedIShiftL# middleEndSwar 3# ) end arr
+       in w2
+
+-- Here, the offset and the end refer to 64-bit word units, not byte units
+-- like they do in validateRangeSlowly.
+validateRangeSwar# :: Word# -> Int# -> Int# -> ByteArray# -> Word#
+{-# inline validateRangeSwar# #-}
+validateRangeSwar# acc0 off0 end arr = go off0 acc0
+  where
+  go :: Int# -> Word# -> Word#
+  go off acc = case off <# end of
+    1# -> go (off +# 1#) (Exts.or# (Exts.indexWordArray# arr off) acc)
+    _ -> acc
+
+-- Accepts a start and end position. The end position is exclusive.
+validateRangeSlowly# :: Word# -> Int# -> Int# -> ByteArray# -> Word#
+{-# inline validateRangeSlowly# #-}
+validateRangeSlowly# acc0 off0 end arr = go off0 acc0
+  where
+  go :: Int# -> Word# -> Word#
+  go off acc = case off <# end of
+    1# -> go (off +# 1#) (Exts.or# (Exts.word8ToWord# (Exts.indexWord8Array# arr off)) acc)
+    _ -> acc
 
 {- | Is the byte sequence equal to the @NUL@-terminated C String?
 The C string must be a constant.

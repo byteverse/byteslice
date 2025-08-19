@@ -64,7 +64,7 @@ library
     , primitive-addr      >=0.1    && <0.2
     , primitive-unlifted  >=0.1.2  && <2.3
     , run-st              >=0.1.1  && <0.2
-    , text                >=1.2.5
+    , text                >=2.1
     , text-short          >=0.1.3  && <0.2
     , tuples              >=0.1    && <0.2
     , vector              >=0.12   && <0.14
@@ -106,7 +106,7 @@ test-suite test
     , tasty
     , tasty-hunit
     , tasty-quickcheck
-    , text                >=1.2
+    , text                >=2.1
     , transformers
 
 benchmark bench

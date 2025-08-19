@@ -5,6 +5,7 @@ import Data.List (permutations)
 
 import qualified Data.Bytes as Bytes
 import qualified Data.Bytes.Text.Ascii as Ascii
+import qualified Data.Bytes.Text.Utf8 as Utf8
 
 naiveMconcat :: [Bytes] -> Bytes
 naiveMconcat = foldr mappend mempty
@@ -17,6 +18,14 @@ main =
     , bgroup
         "replace"
         [ bench "the-dog-and-the-shadow" (whnf replaceMeat theDogAndTheShadow)
+        ]
+    , bgroup
+        "ascii"
+        [ bench "toText" (whnf Ascii.toText theDogAndTheShadow)
+        ]
+    , bgroup
+        "utf8"
+        [ bench "toText" (whnf Utf8.toText theDogAndTheShadow)
         ]
     ]
 
