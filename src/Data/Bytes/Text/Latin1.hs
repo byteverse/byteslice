@@ -22,7 +22,9 @@ module Data.Bytes.Text.Latin1
   ( toString
   , fromString
   , decodeDecWord
-
+    -- * Hexadecimal
+  , fromHexText
+  , toHexText
     -- * Specialized Comparisons
   , equals1
   , equals2
@@ -43,12 +45,20 @@ module Data.Bytes.Text.Latin1
 
 import Prelude hiding (length)
 
+import Control.Monad.ST (ST)
+import Control.Monad.ST.Run (runByteArrayST)
 import Data.Bytes.Types (Bytes (..))
 import Data.Char (chr, ord)
-import Data.Primitive (ByteArray (ByteArray))
+import Data.Bits ((.|.), unsafeShiftL)
+import Data.Primitive (ByteArray (ByteArray), MutableByteArray, newByteArray)
+import Data.Primitive (indexByteArray, writeByteArray, unsafeFreezeByteArray)
+import Data.Text (Text)
 import Data.Word (Word8)
 import GHC.Exts (Char (C#), Int (I#), Word (W#), Word#, int2Word#, ltWord#, or#)
+import Data.Bits (unsafeShiftR, complement, (.&.))
 
+import qualified Data.Text.Array as A
+import qualified Data.Text.Internal as I
 import qualified Data.Bytes.Pure as Bytes
 import qualified Data.Primitive as PM
 import qualified GHC.Exts as Exts
@@ -301,6 +311,88 @@ equals15 !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 !c8 !c9 !c10 !c11 !c12 !c13 !c14 (Bytes
 
 indexCharArray :: ByteArray -> Int -> Char
 indexCharArray (ByteArray arr) (I# off) = C# (Exts.indexCharArray# arr off)
+
+-- Returns the maximum Word if the argument is not the ASCII encoding of
+-- a hexadecimal digit.
+-- Always returns a number between 0 and 15 (inclusive) unless the byte
+-- is not used in hexadecimal encodings.
+oneHex :: Word8 -> Word
+{-# INLINE oneHex #-}
+oneHex w
+  | w >= 48 && w < 58 = (fromIntegral w - 48)
+  | w >= 65 && w < 71 = (fromIntegral w - 55)
+  | w >= 97 && w < 103 = (fromIntegral w - 87)
+  | otherwise = maxBound
+
+toHexText :: Bytes -> Text
+toHexText (Bytes arr off len) = 
+  let !(ByteArray r) = runByteArrayST $ do
+        dst <- newByteArray (len * 2)
+        populateWithHexadecimalText arr off len dst 0
+        unsafeFreezeByteArray dst
+  in I.Text (A.ByteArray r) 0 (len * 2)
+
+-- I copied this out of bytebuild. I probably wrote it this way to avoid
+-- branching. It sure does make it hard to understand though.
+-- This function only considers the low 4 bits. The upper bits (bit
+-- position 4 and higher) do not need to be zero for this to work.
+toHexLower :: Word -> Word8
+{-# inline toHexLower #-}
+toHexLower w' =
+  fromIntegral $
+    (complement theMask .&. loSolved)
+      .|. (theMask .&. hiSolved)
+ where
+  w = w' .&. 0xF
+  -- This is all ones if the value was >= 10
+  theMask = (1 .&. unsafeShiftR (w - 10) 63) - 1
+  loSolved = w + 48
+  hiSolved = w + 87
+
+-- Precondition: dst len is 2*srcLen
+populateWithHexadecimalText :: ByteArray -> Int -> Int -> MutableByteArray s -> Int -> ST s ()
+populateWithHexadecimalText !src !srcIx !srcLen !dst !dstIx = case srcLen of
+  0 -> pure ()
+  _ -> do
+    let !w = fromIntegral (indexByteArray src srcIx :: Word8) :: Word
+    writeByteArray dst dstIx (toHexLower (unsafeShiftR w 4))
+    writeByteArray dst (dstIx + 1) (toHexLower w)
+    populateWithHexadecimalText src (srcIx + 1) (srcLen - 1) dst (dstIx + 2)
+
+-- | This always fails if the length of the text is not even.
+-- The length of the returned byte array is the length of the
+-- argument divided by two.
+fromHexText :: Text -> Maybe ByteArray
+fromHexText (I.Text (A.ByteArray b) off len)
+  | rem len 2 == 1 = Nothing
+  | allHexBytes (ByteArray b) off len =
+      let !r = runByteArrayST $ do
+            dst <- newByteArray (quot len 2)
+            finishFromHexadecimalText (ByteArray b) off len dst 0
+            unsafeFreezeByteArray dst
+       in Just r
+  | otherwise = Nothing
+
+allHexBytes :: ByteArray -> Int -> Int -> Bool
+allHexBytes !arr !off !len = case len of
+  0 -> True
+  _ -> if oneHex (indexByteArray arr off) == maxBound
+    then False
+    else allHexBytes arr (off + 1) (len - 1)
+
+-- Precondition: length is a multiple of 2
+-- Precondition: all characters are either digits or a-f or A-F
+-- The destination buffer must have space for all characters
+-- that will be encoded.
+finishFromHexadecimalText :: ByteArray -> Int -> Int -> MutableByteArray s -> Int -> ST s ()
+finishFromHexadecimalText !arr !off !len !dst !dstIx = case len of
+  0 -> pure ()
+  _ -> do
+    let !nybbleHi = oneHex (indexByteArray arr off)
+    let !nybbleLo = oneHex (indexByteArray arr (off + 1))
+    let w = fromIntegral (unsafeShiftL nybbleHi 4 .|. nybbleLo) :: Word8
+    writeByteArray dst dstIx w
+    finishFromHexadecimalText arr (off + 2) (len - 2) dst (dstIx + 1)
 
 {- | Decode machine-sized word from decimal representation. Returns
 Nothing on overflow. Allows any number of leading zeros. Trailing

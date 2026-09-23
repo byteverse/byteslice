@@ -200,6 +200,7 @@ module Data.Bytes
     -- * Length Indexed
   , withLength
   , withLengthU
+  , withLengthU#
   ) where
 
 import Prelude hiding (all, any, dropWhile, elem, foldl, foldr, length, map, null, readFile, replicate, takeWhile)
@@ -744,4 +745,14 @@ withLengthU ::
 withLengthU !arr f =
   Nat.with
     (PM.sizeofByteArray arr)
+    (\n -> f n (ByteArrayN arr))
+
+withLengthU# ::
+  ByteArray ->
+  (forall (n :: GHC.Nat). Arithmetic.Nat# n -> ByteArrayN n -> a) ->
+  a
+{-# INLINE withLengthU# #-}
+withLengthU# !arr f =
+  Nat.with#
+    (case PM.sizeofByteArray arr of { I# x -> x })
     (\n -> f n (ByteArrayN arr))

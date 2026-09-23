@@ -45,6 +45,10 @@ newtype ByteArrayN (n :: Nat) = ByteArrayN
   { array :: ByteArray
   }
 
+instance Eq (ByteArrayN n) where
+  {-# inline (==) #-}
+  ByteArrayN a == ByteArrayN b = a == b
+
 instance (KnownNat n) => Show (ByteArrayN n) where
   showsPrec _ (ByteArrayN arr) s =
     let len = fromInteger (naturalToInteger (natVal (Proxy :: Proxy n)))

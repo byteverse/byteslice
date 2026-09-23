@@ -1,5 +1,10 @@
 # Revision history for byteslice
 
+## 0.2.16.0 -- 2026-??-??
+
+* Add `Eq` instance for `ByteArrayN`
+* Add functions to Data.Bytes.Text.Latin1: `fromHexText` and `toHexText`
+
 ## 0.2.15.0 -- 2024-06-12
 
 * Add functions for recovering length from `ByteArrayN`
